@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.1" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.26" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AtraccionesTuristicas.Backend.LA.Business\AtraccionesTuristicas.Backend.LA.Business.csproj" />
+    <ProjectReference Include="..\AtraccionesTuristicas.Backend.LA.DataAccess\AtraccionesTuristicas.Backend.LA.DataAccess.csproj" />
+    <ProjectReference Include="..\AtraccionesTuristicas.Backend.LA.DataManagement\AtraccionesTuristicas.Backend.LA.DataManagement.csproj" />
+  </ItemGroup>
+
+</Project>

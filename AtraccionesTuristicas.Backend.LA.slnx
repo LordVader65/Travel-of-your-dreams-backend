@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="AtraccionesTuristicas.Backend.LA.Api/AtraccionesTuristicas.Backend.LA.Api.csproj" />
+    <Project Path="AtraccionesTuristicas.Backend.LA.Business/AtraccionesTuristicas.Backend.LA.Business.csproj" />
+    <Project Path="AtraccionesTuristicas.Backend.LA.DataAccess/AtraccionesTuristicas.Backend.LA.DataAccess.csproj" />
+    <Project Path="AtraccionesTuristicas.Backend.LA.DataManagement/AtraccionesTuristicas.Backend.LA.DataManagement.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>

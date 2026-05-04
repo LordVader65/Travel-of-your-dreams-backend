@@ -1,0 +1,6 @@
+@AtraccionesTuristicas.Backend.LA.Api_HostAddress = http://localhost:5001
+
+GET {{AtraccionesTuristicas.Backend.LA.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
