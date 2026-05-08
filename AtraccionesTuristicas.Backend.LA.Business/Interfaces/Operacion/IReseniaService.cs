@@ -1,0 +1,4 @@
+﻿namespace AtraccionesTuristicas.Backend.LA.Business.Interfaces.Operacion;
+
+public interface IReseniaService { Task<IReadOnlyList<ReseniaResponse>> ListarAsync(CancellationToken cancellationToken = default); Task<IReadOnlyList<ReseniaResponse>> ListarAdminAsync(CurrentUserData user, CancellationToken cancellationToken = default); Task<ReseniaResponse> CrearAsync(CrearReseniaRequest request, CurrentUserData user, CancellationToken cancellationToken = default); Task<ReseniaResponse> ActualizarAsync(CrearReseniaRequest request, int id, CurrentUserData user, CancellationToken cancellationToken = default); Task<BusinessOperationResult> CambiarEstadoAsync(int id, string estado, CurrentUserData user, CancellationToken cancellationToken = default); Task<BusinessOperationResult> EliminarAsync(int id, CurrentUserData user, CancellationToken cancellationToken = default); }
+

@@ -1,6 +1,5 @@
 ﻿using AtraccionesTuristicas.Backend.LA.Api.Models.Common;
 using AtraccionesTuristicas.Backend.LA.Business.Exceptions;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace AtraccionesTuristicas.Backend.LA.Api.Middleware;
@@ -58,6 +57,28 @@ public class ExceptionHandlingMiddleware
 
             await WriteResponseAsync(context, StatusCodes.Status401Unauthorized, response);
         }
+        catch (ForbiddenBusinessException ex)
+        {
+            _logger.LogWarning(ex, "Operacion no permitida.");
+
+            var response = ApiErrorResponse.Create(
+                status: StatusCodes.Status403Forbidden,
+                error: ex.Message,
+                path: context.Request.Path);
+
+            await WriteResponseAsync(context, StatusCodes.Status403Forbidden, response);
+        }
+        catch (ConflictBusinessException ex)
+        {
+            _logger.LogWarning(ex, "Conflicto de negocio.");
+
+            var response = ApiErrorResponse.Create(
+                status: StatusCodes.Status409Conflict,
+                error: ex.Message,
+                path: context.Request.Path);
+
+            await WriteResponseAsync(context, StatusCodes.Status409Conflict, response);
+        }
         catch (BusinessException ex)
         {
             _logger.LogWarning(ex, "Se produjo una excepción de negocio.");
@@ -90,7 +111,7 @@ public class ExceptionHandlingMiddleware
 
         var options = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));

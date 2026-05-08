@@ -1,0 +1,4 @@
+﻿namespace AtraccionesTuristicas.Backend.LA.Business.DTOs.Identity;
+
+public sealed class UsuarioResponse { public int Id { get; set; } public Guid Guid { get; set; } public string Login { get; set; } = string.Empty; public string Estado { get; set; } = "A"; public IReadOnlyList<string> Roles { get; set; } = []; }
+
