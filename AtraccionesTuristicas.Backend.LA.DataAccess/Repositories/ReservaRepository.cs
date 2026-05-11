@@ -103,17 +103,41 @@ public sealed class ReservaRepository : RepositoryBase<ReservaEntity>, IReservaR
         string? observacion = null,
         CancellationToken cancellationToken = default)
     {
-        var reserva = await DbSet.FirstOrDefaultAsync(x => x.rev_guid == reservaGuid, cancellationToken);
+        var reserva = await DbSet
+            .Include(x => x.Detalles)
+            .FirstOrDefaultAsync(x => x.rev_guid == reservaGuid, cancellationToken);
         if (reserva is null)
         {
             throw new InvalidOperationException($"Reserva no encontrada: {reservaGuid}");
         }
 
         var estadoAnterior = reserva.rev_estado;
+        var devuelveCupos = estadoAnterior == "PENDIENTE" && (nuevoEstado == "CANCELADA" || nuevoEstado == "EXPIRADA");
         reserva.rev_estado = nuevoEstado;
         reserva.rev_fecha_mod = DateTime.UtcNow;
         reserva.rev_usuario_mod = usuario;
         reserva.rev_ip_mod = ip;
+
+        if (nuevoEstado == "CANCELADA")
+        {
+            reserva.rev_fecha_cancelacion = DateTime.UtcNow;
+            reserva.rev_usuario_cancelacion = usuario;
+            reserva.rev_ip_cancelacion = ip;
+            reserva.rev_motivo_cancelacion = observacion;
+        }
+
+        if (devuelveCupos)
+        {
+            var cantidad = reserva.Detalles.Where(x => x.rdet_estado == "A").Sum(x => x.rdet_cantidad);
+            var horario = await Context.Horarios.FirstOrDefaultAsync(x => x.hor_id == reserva.hor_id, cancellationToken);
+            if (horario is not null)
+            {
+                horario.hor_cupos_disponibles += cantidad;
+                horario.hor_fecha_mod = DateTime.UtcNow;
+                horario.hor_usuario_mod = usuario;
+                horario.hor_ip_mod = ip;
+            }
+        }
 
         await Context.ReservaEstadoHistorial.AddAsync(new ReservaEstadoHistorialEntity
         {

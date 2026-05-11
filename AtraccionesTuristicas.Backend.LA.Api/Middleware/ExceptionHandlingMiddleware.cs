@@ -1,5 +1,6 @@
 ﻿using AtraccionesTuristicas.Backend.LA.Api.Models.Common;
 using AtraccionesTuristicas.Backend.LA.Business.Exceptions;
+using Npgsql;
 using System.Text.Json;
 
 namespace AtraccionesTuristicas.Backend.LA.Api.Middleware;
@@ -86,6 +87,30 @@ public class ExceptionHandlingMiddleware
             var response = ApiErrorResponse.Create(
                 status: StatusCodes.Status409Conflict,
                 error: ex.Message,
+                path: context.Request.Path);
+
+            await WriteResponseAsync(context, StatusCodes.Status409Conflict, response);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.RaiseException)
+        {
+            _logger.LogWarning(ex, "Regla de base de datos no cumplida.");
+
+            var response = ApiErrorResponse.Create(
+                status: StatusCodes.Status409Conflict,
+                error: ex.MessageText,
+                path: context.Request.Path);
+
+            await WriteResponseAsync(context, StatusCodes.Status409Conflict, response);
+        }
+        catch (PostgresException ex) when (ex.SqlState == "23505")
+        {
+            _logger.LogWarning(ex, "Restricción única no cumplida.");
+
+            var response = ApiErrorResponse.Create(
+                status: StatusCodes.Status409Conflict,
+                error: ex.ConstraintName == "IX_pagos_pag_referencia"
+                    ? "La referencia de pago ya fue registrada. Ingresa una referencia diferente."
+                    : "El registro ya existe.",
                 path: context.Request.Path);
 
             await WriteResponseAsync(context, StatusCodes.Status409Conflict, response);

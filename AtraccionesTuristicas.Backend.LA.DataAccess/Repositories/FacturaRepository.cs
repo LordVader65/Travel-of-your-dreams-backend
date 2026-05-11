@@ -12,7 +12,13 @@ public sealed class FacturaRepository : RepositoryBase<FacturaEntity>, IFacturaR
     public FacturaRepository(AtraccionesDbContext context) : base(context) { }
 
     public Task<FacturaEntity?> ObtenerPorGuidAsync(Guid guid, CancellationToken cancellationToken = default) =>
-        DbSet.AsNoTracking().FirstOrDefaultAsync(x => x.fac_guid == guid, cancellationToken);
+        DbSet.AsNoTracking()
+            .Include(x => x.DatosFacturacion)
+            .Include(x => x.Pago)
+            .Include(x => x.Reserva).ThenInclude(x => x!.Cliente)
+            .Include(x => x.Reserva).ThenInclude(x => x!.Horario).ThenInclude(x => x!.Atraccion).ThenInclude(x => x!.Destino)
+            .Include(x => x.Reserva).ThenInclude(x => x!.Detalles).ThenInclude(x => x.Ticket)
+            .FirstOrDefaultAsync(x => x.fac_guid == guid, cancellationToken);
 
     public Task<FacturaEntity?> ObtenerPorReservaIdAsync(int reservaId, CancellationToken cancellationToken = default) =>
         DbSet.AsNoTracking().FirstOrDefaultAsync(x => x.rev_id == reservaId, cancellationToken);

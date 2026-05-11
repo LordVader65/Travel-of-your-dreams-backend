@@ -1,4 +1,5 @@
 using AtraccionesTuristicas.Backend.LA.Api.Security;
+using AtraccionesTuristicas.Backend.LA.Business.DTOs.Auditoria;
 using AtraccionesTuristicas.Backend.LA.Business.Interfaces.Auditoria;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,9 @@ public sealed class AuditoriaController : ApiControllerBase
     public AuditoriaController(IAuditoriaLogService auditoria, ICurrentUserFactory currentUserFactory) : base(currentUserFactory) => _auditoria = auditoria;
 
     [HttpGet]
-    public async Task<IActionResult> Consultar([FromQuery] string tabla, CancellationToken ct) =>
-        OkEnvelope(await _auditoria.ConsultarPorTablaAsync(tabla, ct));
+    public async Task<IActionResult> Consultar([FromQuery] AuditoriaLogFiltroRequest filtro, CancellationToken ct)
+    {
+        var result = await _auditoria.ConsultarAsync(filtro, ct);
+        return ListEnvelope(result.Items, result.Page, result.Limit, result.Total);
+    }
 }

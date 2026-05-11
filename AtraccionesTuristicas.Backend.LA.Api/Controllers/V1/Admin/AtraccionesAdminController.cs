@@ -54,12 +54,20 @@ public sealed class AtraccionesAdminController : ApiControllerBase
         return CreatedEnvelope(await _categorias.AsociarAsync(request, CurrentUser, cancellationToken));
     }
 
+    [HttpDelete("{atraccionId:int}/categorias/{categoriaId:int}")]
+    public async Task<IActionResult> RemoverCategoria(int atraccionId, int categoriaId, CancellationToken cancellationToken) =>
+        OkEnvelope(await _categorias.RemoverAsync(atraccionId, categoriaId, CurrentUser, cancellationToken));
+
     [HttpPost("{atraccionId:int}/idiomas")]
     public async Task<IActionResult> AsociarIdioma(int atraccionId, AsociarIdiomaAtraccionRequest request, CancellationToken cancellationToken)
     {
         request.AtraccionId = atraccionId; request.UsuarioIngreso = CurrentUser.Login;
         return CreatedEnvelope(await _idiomas.AsociarAsync(request, CurrentUser, cancellationToken));
     }
+
+    [HttpDelete("{atraccionId:int}/idiomas/{idiomaId:int}")]
+    public async Task<IActionResult> RemoverIdioma(int atraccionId, int idiomaId, CancellationToken cancellationToken) =>
+        OkEnvelope(await _idiomas.RemoverAsync(atraccionId, idiomaId, CurrentUser, cancellationToken));
 
     [HttpPost("{atraccionId:int}/imagenes")]
     public async Task<IActionResult> AsociarImagen(int atraccionId, AsociarImagenAtraccionRequest request, CancellationToken cancellationToken)
@@ -68,10 +76,18 @@ public sealed class AtraccionesAdminController : ApiControllerBase
         return CreatedEnvelope(await _imagenes.AsociarAsync(request, CurrentUser, cancellationToken));
     }
 
+    [HttpDelete("{atraccionId:int}/imagenes/{imagenId:int}")]
+    public async Task<IActionResult> RemoverImagen(int atraccionId, int imagenId, CancellationToken cancellationToken) =>
+        OkEnvelope(await _imagenes.RemoverAsync(atraccionId, imagenId, CurrentUser, cancellationToken));
+
     [HttpPost("{atraccionId:int}/incluye")]
     public async Task<IActionResult> AsociarIncluye(int atraccionId, AsociarIncluyeAtraccionRequest request, CancellationToken cancellationToken)
     {
         request.AtraccionId = atraccionId; request.UsuarioIngreso = CurrentUser.Login;
         return CreatedEnvelope(await _incluyes.AsociarAsync(request, CurrentUser, cancellationToken));
     }
+
+    [HttpDelete("{atraccionId:int}/incluye/{incluyeId:int}")]
+    public async Task<IActionResult> RemoverIncluye(int atraccionId, int incluyeId, CancellationToken cancellationToken) =>
+        OkEnvelope(await _incluyes.RemoverAsync(atraccionId, incluyeId, CurrentUser, cancellationToken));
 }

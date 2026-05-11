@@ -15,7 +15,7 @@ public static class TicketDataMapper
 
     public static TicketEntity ToEntity(TicketDataModel model) => new()
     {
-        tck_id = model.Id, tck_guid = model.Guid, at_id = model.AtraccionId, tck_titulo = model.Titulo,
+        tck_id = model.Id, tck_guid = model.Guid == Guid.Empty ? Guid.NewGuid() : model.Guid, at_id = model.AtraccionId, tck_titulo = model.Titulo,
         tck_precio = model.Precio, tck_moneda = model.Moneda, tck_tipo_participante = model.TipoParticipante,
         tck_capacidad_maxima = model.CapacidadMaxima, tck_estado = model.Estado,
         tck_usuario_ingreso = model.UsuarioIngreso, tck_ip_ingreso = model.IpIngreso

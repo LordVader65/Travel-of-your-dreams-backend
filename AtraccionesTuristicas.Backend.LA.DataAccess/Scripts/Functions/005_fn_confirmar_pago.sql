@@ -25,6 +25,20 @@ BEGIN
         RAISE EXCEPTION 'Reserva no encontrada: %', p_rev_guid;
     END IF;
 
+    IF v_estado_actual IN ('PAGADA','CONFIRMADA') THEN
+        SELECT pag_guid
+        INTO v_pag_guid
+        FROM pagos
+        WHERE rev_id = v_rev_id
+          AND pag_estado = 'APROBADO'
+        ORDER BY pag_fecha_utc DESC
+        LIMIT 1;
+
+        IF v_pag_guid IS NOT NULL THEN
+            RETURN v_pag_guid;
+        END IF;
+    END IF;
+
     IF v_estado_actual <> 'PENDIENTE' THEN
         RAISE EXCEPTION 'Solo se puede pagar una reserva PENDIENTE. Estado actual: %', v_estado_actual;
     END IF;
@@ -35,6 +49,16 @@ BEGIN
 
     IF p_monto <> v_total THEN
         RAISE EXCEPTION 'Monto de pago inválido. Esperado: %, recibido: %', v_total, p_monto;
+    END IF;
+
+    SELECT pag_guid
+    INTO v_pag_guid
+    FROM pagos
+    WHERE pag_referencia = p_referencia
+    LIMIT 1;
+
+    IF v_pag_guid IS NOT NULL THEN
+        RAISE EXCEPTION 'La referencia de pago ya fue registrada. Ingresa una referencia diferente para confirmar este pago.';
     END IF;
 
     INSERT INTO pagos (

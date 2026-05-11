@@ -25,7 +25,9 @@ public sealed class AtraccionesController : ApiControllerBase
 
     [HttpGet]
     public async Task<IActionResult> Listar(
-        [FromQuery] string? ciudad,
+        [FromQuery] string? destino,
+        [FromQuery(Name = "fecha_desde")] DateOnly? fechaDesde,
+        [FromQuery(Name = "fecha_hasta")] DateOnly? fechaHasta,
         [FromQuery] string? tipo,
         [FromQuery] string? subtipo,
         [FromQuery] string? etiqueta,
@@ -40,7 +42,9 @@ public sealed class AtraccionesController : ApiControllerBase
     {
         var filtro = new AtraccionFiltroRequest
         {
-            Pais = ciudad,
+            Pais = destino,
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
             Tipo = tipo,
             Subtipo = subtipo,
             Etiqueta = etiqueta,
@@ -58,7 +62,7 @@ public sealed class AtraccionesController : ApiControllerBase
     }
 
     [HttpGet("filtros")]
-    public async Task<IActionResult> Filtros([FromQuery] string? ciudad, CancellationToken cancellationToken)
+    public async Task<IActionResult> Filtros([FromQuery] string? destino, CancellationToken cancellationToken)
     {
         var data = new
         {
@@ -68,7 +72,7 @@ public sealed class AtraccionesController : ApiControllerBase
             min_rating_filter = new[] { 3.0m, 3.5m, 4.0m, 4.5m }.Select(x => new { name = x.ToString("0.0"), tagname = x.ToString("0.0"), product_count = 0 }),
             time_of_day_filters = new[] { "05:00-12:00", "12:00-18:00", "18:00-05:00" }.Select(x => new { name = x, tagname = x, product_count = 0 }),
             supported_language_filters = (await _idiomas.ListarAsync(cancellationToken)).Select(x => new { name = x.Descripcion, tagname = x.Codigo, product_count = 0 }),
-            ciudad
+            destino
         };
 
         return OkEnvelope(data);

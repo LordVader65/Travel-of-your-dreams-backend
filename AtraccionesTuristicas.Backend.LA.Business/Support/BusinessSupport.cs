@@ -10,6 +10,11 @@
             if (string.IsNullOrWhiteSpace(value)) errors.Add($"{name} es obligatorio.");
         }
 
+        public static void MaxLength(string? value, int maxLength, string name, List<string> errors)
+        {
+            if (!string.IsNullOrEmpty(value) && value.Length > maxLength) errors.Add($"{name} no puede superar {maxLength} caracteres.");
+        }
+
         public static void Positive(decimal value, string name, List<string> errors)
         {
             if (value <= 0) errors.Add($"{name} debe ser mayor a cero.");
@@ -18,6 +23,35 @@
         public static void Positive(int value, string name, List<string> errors)
         {
             if (value <= 0) errors.Add($"{name} debe ser mayor a cero.");
+        }
+
+        public static void NonNegative(decimal value, string name, List<string> errors)
+        {
+            if (value < 0) errors.Add($"{name} no puede ser negativo.");
+        }
+
+        public static void NonNegative(decimal? value, string name, List<string> errors)
+        {
+            if (value is < 0) errors.Add($"{name} no puede ser negativo.");
+        }
+
+        public static void NonNegative(int? value, string name, List<string> errors)
+        {
+            if (value is < 0) errors.Add($"{name} no puede ser negativo.");
+        }
+
+        public static void Phone(string? value, string name, List<string> errors)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && !Regex.IsMatch(value, "^\\d+$")) errors.Add($"{name} solo permite digitos.");
+        }
+
+        public static void IdentificationType(string? value, string name, List<string> errors)
+        {
+            var allowed = new[] { "CEDULA", "RUC", "PASAPORTE" };
+            if (string.IsNullOrWhiteSpace(value) || !allowed.Contains(value.Trim().ToUpperInvariant()))
+            {
+                errors.Add($"{name} debe ser CEDULA, RUC o PASAPORTE.");
+            }
         }
 
         public static void Email(string? value, string name, List<string> errors)

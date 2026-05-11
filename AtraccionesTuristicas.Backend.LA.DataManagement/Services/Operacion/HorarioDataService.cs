@@ -28,6 +28,14 @@ public sealed class HorarioDataService : IHorarioDataService
         return entities.Select(HorarioDataMapper.ToDataModel).ToList();
     }
 
+    public async Task<HorarioDataModel?> MaterializarParaFechaAsync(Guid horarioBaseGuid, DateOnly fecha, string usuario, string ip, CancellationToken cancellationToken = default)
+    {
+        var entity = await _unitOfWork.Horarios.MaterializarParaFechaAsync(horarioBaseGuid, fecha, usuario, ip, cancellationToken);
+        if (entity is null) return null;
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return HorarioDataMapper.ToDataModel(entity);
+    }
+
     public async Task<HorarioDataModel> CrearAsync(HorarioDataModel model, CancellationToken cancellationToken = default)
     {
         var entity = new HorarioEntity
@@ -38,6 +46,7 @@ public sealed class HorarioDataService : IHorarioDataService
             hor_hora_inicio = model.HoraInicio,
             hor_hora_fin = model.HoraFin,
             hor_cupos_disponibles = model.CuposDisponibles,
+            hor_dias_semana = model.DiasSemana,
             hor_fecha_ingreso = DateTime.UtcNow,
             hor_usuario_ingreso = model.UsuarioIngreso,
             hor_ip_ingreso = model.IpIngreso,
@@ -59,6 +68,7 @@ public sealed class HorarioDataService : IHorarioDataService
         entity.hor_hora_inicio = model.HoraInicio;
         entity.hor_hora_fin = model.HoraFin;
         entity.hor_cupos_disponibles = model.CuposDisponibles;
+        entity.hor_dias_semana = model.DiasSemana;
         entity.hor_estado = model.Estado;
         entity.hor_fecha_mod = DateTime.UtcNow;
         entity.hor_usuario_mod = model.UsuarioModificacion;

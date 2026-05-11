@@ -55,6 +55,8 @@ public sealed class AtraccionDataService : IAtraccionDataService
             filtro.Page,
             filtro.Limit,
             filtro.Pais,
+            filtro.FechaDesde,
+            filtro.FechaHasta,
             filtro.Tipo,
             filtro.Subtipo,
             filtro.Etiqueta,

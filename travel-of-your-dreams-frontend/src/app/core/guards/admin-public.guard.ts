@@ -1,0 +1,14 @@
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
+
+export const adminPublicGuard = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAuthenticated && auth.hasRole('ADMIN')) {
+    return router.parseUrl('/admin');
+  }
+
+  return true;
+};

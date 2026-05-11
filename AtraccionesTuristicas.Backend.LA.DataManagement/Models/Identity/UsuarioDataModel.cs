@@ -8,4 +8,9 @@ public sealed class UsuarioDataModel
     public string PasswordHash { get; set; } = string.Empty;
     public string Estado { get; set; } = "A";
     public IReadOnlyList<string> Roles { get; set; } = [];
+    public int? ClienteId { get; set; }
+    public Guid? ClienteGuid { get; set; }
+    public string? ClienteNombre { get; set; }
+    public string? ClienteIdentificacion { get; set; }
+    public string? ClienteCorreo { get; set; }
 }

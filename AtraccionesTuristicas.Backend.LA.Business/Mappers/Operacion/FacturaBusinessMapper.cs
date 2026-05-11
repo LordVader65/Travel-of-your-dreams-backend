@@ -2,6 +2,6 @@
 
 internal static partial class Map
 {
-        public static FacturaResponse Factura(FacturaDataModel x) => new() { Id = x.Id, Guid = x.Guid, ReservaId = x.ReservaId, PagoId = x.PagoId, DatosFacturacionId = x.DatosFacturacionId, Numero = x.Numero, FechaEmision = x.FechaEmision, Subtotal = x.Subtotal, ValorIva = x.ValorIva, Total = x.Total, Moneda = x.Moneda, Observacion = x.Observacion, Estado = x.Estado };
+        public static FacturaResponse Factura(FacturaDataModel x) => new() { Id = x.Id, Guid = x.Guid, ReservaId = x.ReservaId, PagoId = x.PagoId, DatosFacturacionId = x.DatosFacturacionId, Numero = x.Numero, FechaEmision = x.FechaEmision, Subtotal = x.Subtotal, ValorIva = x.ValorIva, Total = x.Total, Moneda = x.Moneda, Observacion = x.Observacion, Estado = x.Estado, Reserva = x.Reserva, Cliente = x.Cliente, DatosFacturacion = x.DatosFacturacion, Atraccion = x.Atraccion, Pago = x.Pago, Detalles = x.Detalles.Cast<object>().ToList() };
 }
 

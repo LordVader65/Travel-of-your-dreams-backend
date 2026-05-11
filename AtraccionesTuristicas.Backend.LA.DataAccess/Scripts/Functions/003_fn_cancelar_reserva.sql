@@ -21,8 +21,8 @@ BEGIN
         RAISE EXCEPTION 'Reserva no encontrada: %', p_rev_guid;
     END IF;
 
-    IF v_estado_actual IN ('CANCELADA','EXPIRADA','USADA','NO_SHOW') THEN
-        RAISE EXCEPTION 'La reserva no es cancelable. Estado actual: %', v_estado_actual;
+    IF v_estado_actual <> 'PENDIENTE' THEN
+        RAISE EXCEPTION 'Solo se puede cancelar una reserva pendiente. Estado actual: %', v_estado_actual;
     END IF;
 
     SELECT COALESCE(SUM(rdet_cantidad), 0)

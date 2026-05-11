@@ -4,6 +4,7 @@ namespace AtraccionesTuristicas.Backend.LA.DataAccess.Repositories.Interfaces;
 
 public interface IUsuarioRepository : IRepositoryBase<UsuarioEntity>
 {
+    Task<IReadOnlyList<UsuarioEntity>> ListarConRolesYClientesAsync(CancellationToken cancellationToken = default);
     Task<UsuarioEntity?> ObtenerPorGuidAsync(Guid guid, CancellationToken cancellationToken = default);
     Task<UsuarioEntity?> ObtenerPorLoginAsync(string login, CancellationToken cancellationToken = default);
     Task<UsuarioEntity?> ObtenerConRolesAsync(string login, CancellationToken cancellationToken = default);

@@ -4,7 +4,7 @@ public sealed class ClienteDataModel
 {
     public int Id { get; set; }
     public Guid Guid { get; set; }
-    public int UsuarioId { get; set; }
+    public int? UsuarioId { get; set; }
     public string TipoIdentificacion { get; set; } = string.Empty;
     public string NumeroIdentificacion { get; set; } = string.Empty;
     public string? Nombres { get; set; }

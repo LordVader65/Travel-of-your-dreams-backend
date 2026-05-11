@@ -2,6 +2,6 @@
 
 internal static partial class Map
 {
-        public static ReseniaResponse Resenia(ReseniaDataModel x) => new() { Id = x.Id, Guid = x.Guid, AtraccionId = x.AtraccionId, ReservaId = x.ReservaId, Comentario = x.Comentario, Rating = x.Rating, FechaCreacion = x.FechaCreacion, Estado = x.Estado };
+        public static ReseniaResponse Resenia(ReseniaDataModel x) => new() { Id = x.Id, Guid = x.Guid, AtraccionId = x.AtraccionId, ReservaId = x.ReservaId, Comentario = x.Comentario, Rating = x.Rating, FechaCreacion = x.FechaCreacion, UsuarioCreacion = x.UsuarioCreacion, Estado = x.Estado };
 }
 

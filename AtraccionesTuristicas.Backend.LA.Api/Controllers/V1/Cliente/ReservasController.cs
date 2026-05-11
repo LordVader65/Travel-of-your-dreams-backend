@@ -38,6 +38,7 @@ public sealed class ReservasController : ApiControllerBase
         {
             ClienteGuid = clienteGuid,
             HorarioGuid = request.HorGuid,
+            Fecha = request.Fecha,
             Tickets = request.Lineas.Select(x => new CrearReservaDetalleRequest { TicketGuid = x.TckGuid, Cantidad = x.Cantidad }).ToList(),
             Usuario = CurrentUser.Login,
             Ip = CurrentUser.Ip,
@@ -58,6 +59,7 @@ public sealed class ReservasController : ApiControllerBase
         {
             ClienteGuid = clienteGuid,
             HorarioGuid = request.HorGuid,
+            Fecha = request.Fecha,
             Tickets = request.Lineas.Select(x => new CrearReservaDetalleRequest { TicketGuid = x.TckGuid, Cantidad = x.Cantidad }).ToList(),
             Usuario = CurrentUser.Login,
             Ip = CurrentUser.Ip,

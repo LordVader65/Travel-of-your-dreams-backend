@@ -1,6 +1,7 @@
 using AtraccionesTuristicas.Backend.LA.Api.Models.Requests;
 using AtraccionesTuristicas.Backend.LA.Api.Security;
 using AtraccionesTuristicas.Backend.LA.Business.DTOs.Cliente;
+using AtraccionesTuristicas.Backend.LA.Business.Exceptions;
 using AtraccionesTuristicas.Backend.LA.Business.Interfaces.Cliente;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,6 +32,14 @@ public sealed class ClientesAdminController : ApiControllerBase
     public async Task<IActionResult> Obtener(Guid guid, CancellationToken ct) =>
         OkEnvelope(await _clientes.ObtenerPorGuidAsync(guid, ct));
 
+    [HttpPost]
+    public async Task<IActionResult> Crear(CrearClienteRequest request, CancellationToken ct)
+    {
+        request.UsuarioIngreso = CurrentUser.Login;
+        request.IpIngreso = CurrentUser.Ip;
+        return CreatedEnvelope(await _clientes.CrearAsync(request, ct));
+    }
+
     [HttpPut("{guid:guid}/estado")]
     public async Task<IActionResult> CambiarEstado(Guid guid, CambiarEstadoApiRequest request, CancellationToken ct) =>
         OkEnvelope(await _clientes.CambiarEstadoAsync(new CambiarEstadoClienteRequest { ClienteGuid = guid, Estado = request.Estado, Usuario = CurrentUser.Login, Ip = CurrentUser.Ip }, ct));
@@ -38,4 +47,14 @@ public sealed class ClientesAdminController : ApiControllerBase
     [HttpGet("{guid:guid}/datos-facturacion")]
     public async Task<IActionResult> DatosFacturacion(Guid guid, CancellationToken ct) =>
         OkEnvelope(await _datosFacturacion.ListarActivosPorClienteAsync(guid, CurrentUser, ct));
+
+    [HttpPost("{guid:guid}/datos-facturacion")]
+    public async Task<IActionResult> CrearDatosFacturacion(Guid guid, CrearDatosFacturacionRequest request, CancellationToken ct)
+    {
+        var cliente = await _clientes.ObtenerPorGuidAsync(guid, ct) ?? throw new NotFoundException("Cliente no encontrado.");
+        request.ClienteId = cliente.Id;
+        request.UsuarioIngreso = CurrentUser.Login;
+        request.IpIngreso = CurrentUser.Ip;
+        return CreatedEnvelope(await _datosFacturacion.CrearAsync(request, CurrentUser, ct));
+    }
 }

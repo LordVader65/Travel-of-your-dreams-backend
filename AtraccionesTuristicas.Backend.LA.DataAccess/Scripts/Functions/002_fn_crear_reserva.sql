@@ -22,6 +22,7 @@ DECLARE
     v_rev_id INTEGER;
     v_rev_guid UUID;
     v_codigo VARCHAR(20);
+    v_reserva_pendiente INTEGER;
 BEGIN
     SELECT cli_id
     INTO v_cli_id
@@ -34,7 +35,7 @@ BEGIN
 
     SELECT h.hor_id, h.at_id, h.hor_cupos_disponibles
     INTO v_hor_id, v_at_id, v_cupos_disponibles
-    FROM horario
+    FROM horario h
     JOIN atraccion a ON a.at_id = h.at_id
     WHERE h.hor_guid = p_hor_guid
       AND h.hor_estado = 'A'
@@ -45,6 +46,19 @@ BEGIN
 
     IF v_hor_id IS NULL THEN
         RAISE EXCEPTION 'Horario activo no encontrado: %', p_hor_guid;
+    END IF;
+
+    SELECT r.rev_id
+    INTO v_reserva_pendiente
+    FROM reservas r
+    JOIN horario hr ON hr.hor_id = r.hor_id
+    WHERE r.cli_id = v_cli_id
+      AND hr.at_id = v_at_id
+      AND r.rev_estado = 'PENDIENTE'
+    LIMIT 1;
+
+    IF v_reserva_pendiente IS NOT NULL THEN
+        RAISE EXCEPTION 'Ya tienes una reserva pendiente para esta atraccion. Debes pagarla, cancelarla o esperar su expiracion antes de crear otra reserva para la misma atraccion.';
     END IF;
 
     SELECT COALESCE(SUM((item->>'cantidad')::INTEGER), 0)
@@ -65,10 +79,11 @@ BEGIN
     JOIN ticket t ON t.tck_guid = (item->>'tck_guid')::UUID
     WHERE t.tck_estado = 'A'
       AND t.at_id = v_at_id
-      AND (item->>'cantidad')::INTEGER > 0;
+      AND (item->>'cantidad')::INTEGER > 0
+      AND (item->>'cantidad')::INTEGER <= t.tck_capacidad_maxima;
 
     IF v_tickets_validos <> jsonb_array_length(p_tickets) THEN
-        RAISE EXCEPTION 'Todos los tickets deben estar activos y pertenecer a la atracción del horario';
+        RAISE EXCEPTION 'Todos los tickets deben estar activos, pertenecer a la atraccion del horario y respetar su capacidad maxima';
     END IF;
 
     SELECT COALESCE(SUM(t.tck_precio * (item->>'cantidad')::INTEGER), 0)
@@ -78,11 +93,11 @@ BEGIN
     WHERE t.tck_estado = 'A'
       AND t.at_id = v_at_id;
 
-    IF v_subtotal <= 0 THEN
-        RAISE EXCEPTION 'No se encontraron tickets activos para la reserva';
+    IF v_subtotal < 0 THEN
+        RAISE EXCEPTION 'Subtotal de reserva invalido';
     END IF;
 
-    v_iva := ROUND(v_subtotal * COALESCE(p_porcentaje_iva, 0), 2);
+    v_iva := ROUND(v_subtotal * COALESCE(p_porcentaje_iva, 0) / 100, 2);
     v_total := v_subtotal + v_iva;
     v_codigo := CONCAT('REV-', UPPER(SUBSTRING(REPLACE(gen_random_uuid()::TEXT, '-', ''), 1, 12)));
 

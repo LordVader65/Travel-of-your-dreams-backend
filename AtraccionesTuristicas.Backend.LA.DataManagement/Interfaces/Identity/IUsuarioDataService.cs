@@ -4,6 +4,7 @@ namespace AtraccionesTuristicas.Backend.LA.DataManagement.Interfaces.Identity;
 
 public interface IUsuarioDataService
 {
+    Task<IReadOnlyList<UsuarioDataModel>> ListarAsync(CancellationToken cancellationToken = default);
     Task<UsuarioDataModel?> ObtenerPorGuidAsync(Guid guid, CancellationToken cancellationToken = default);
     Task<UsuarioDataModel?> ObtenerPorLoginAsync(string login, CancellationToken cancellationToken = default);
     Task<UsuarioDataModel?> ObtenerConRolesAsync(string login, CancellationToken cancellationToken = default);

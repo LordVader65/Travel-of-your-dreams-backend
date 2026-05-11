@@ -11,6 +11,7 @@ public sealed class HorarioEntity
     public TimeOnly hor_hora_inicio { get; set; }
     public TimeOnly? hor_hora_fin { get; set; }
     public int hor_cupos_disponibles { get; set; }
+    public string hor_dias_semana { get; set; } = "0,1,2,3,4,5,6";
     public DateTime hor_fecha_ingreso { get; set; }
     public string hor_usuario_ingreso { get; set; } = string.Empty;
     public string hor_ip_ingreso { get; set; } = string.Empty;

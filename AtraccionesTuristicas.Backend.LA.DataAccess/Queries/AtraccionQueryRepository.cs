@@ -16,6 +16,8 @@ public sealed class AtraccionQueryRepository : IAtraccionQueryRepository
         int page,
         int limit,
         string? pais = null,
+        DateOnly? fechaDesde = null,
+        DateOnly? fechaHasta = null,
         string? tipo = null,
         string? subtipo = null,
         string? etiqueta = null,
@@ -34,12 +36,31 @@ public sealed class AtraccionQueryRepository : IAtraccionQueryRepository
             .Include(x => x.CategoriaAtracciones).ThenInclude(x => x.Categoria)
             .Include(x => x.IdiomaAtracciones).ThenInclude(x => x.Idioma)
             .Include(x => x.AtraccionIncluyes).ThenInclude(x => x.Incluye)
+            .Include(x => x.Resenias)
             .Where(x => x.at_estado == DatabaseConstants.EstadoActivo);
 
         if (soloDisponibles)
             query = query.Where(x => x.at_disponible);
         if (!string.IsNullOrWhiteSpace(pais))
-            query = query.Where(x => x.Destino != null && x.Destino.des_pais == pais);
+            query = query.Where(x => x.Destino != null && (x.Destino.des_pais == pais || x.Destino.des_nombre.Contains(pais)));
+        if (fechaDesde.HasValue || fechaHasta.HasValue)
+        {
+            var desde = fechaDesde ?? DateOnly.FromDateTime(DateTime.UtcNow);
+            var hasta = fechaHasta ?? desde;
+            if (hasta < desde) hasta = desde;
+            var dias = DiasEnRango(desde, hasta);
+            query = query.Where(x => x.Horarios.Any(h => h.hor_estado == DatabaseConstants.EstadoActivo
+                && h.hor_cupos_disponibles > 0
+                && ((h.hor_fecha >= desde && h.hor_fecha <= hasta)
+                    || (h.hor_fecha.Year >= 2099
+                        && ((dias.Contains(0) && h.hor_dias_semana.Contains("0"))
+                            || (dias.Contains(1) && h.hor_dias_semana.Contains("1"))
+                            || (dias.Contains(2) && h.hor_dias_semana.Contains("2"))
+                            || (dias.Contains(3) && h.hor_dias_semana.Contains("3"))
+                            || (dias.Contains(4) && h.hor_dias_semana.Contains("4"))
+                            || (dias.Contains(5) && h.hor_dias_semana.Contains("5"))
+                            || (dias.Contains(6) && h.hor_dias_semana.Contains("6")))))));
+        }
         if (!string.IsNullOrWhiteSpace(tipo))
             query = query.Where(x => x.CategoriaAtracciones.Any(c => c.Categoria != null && c.Categoria.cat_tagname == tipo));
         if (!string.IsNullOrWhiteSpace(subtipo))
@@ -84,5 +105,16 @@ public sealed class AtraccionQueryRepository : IAtraccionQueryRepository
             .Include(x => x.ImagenAtracciones).ThenInclude(x => x.Imagen)
             .Include(x => x.Tickets)
             .Include(x => x.Horarios)
+            .Include(x => x.Resenias)
             .FirstOrDefaultAsync(x => x.at_guid == guid && x.at_estado == DatabaseConstants.EstadoActivo, cancellationToken);
+
+    private static HashSet<int> DiasEnRango(DateOnly desde, DateOnly hasta)
+    {
+        var dias = new HashSet<int>();
+        for (var fecha = desde; fecha <= hasta && dias.Count < 7; fecha = fecha.AddDays(1))
+        {
+            dias.Add((int)fecha.DayOfWeek);
+        }
+        return dias;
+    }
 }

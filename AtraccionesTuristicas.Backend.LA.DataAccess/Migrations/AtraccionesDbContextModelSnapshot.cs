@@ -852,8 +852,8 @@ namespace AtraccionesTuristicas.Backend.LA.DataAccess.Migrations
                         .HasDefaultValue(1L);
 
                     b.Property<string>("cli_telefono")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<string>("cli_tipo_identificacion")
                         .IsRequired()
@@ -869,7 +869,7 @@ namespace AtraccionesTuristicas.Backend.LA.DataAccess.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("usu_id")
+                    b.Property<int?>("usu_id")
                         .HasColumnType("integer");
 
                     b.HasKey("cli_id");
@@ -966,8 +966,8 @@ namespace AtraccionesTuristicas.Backend.LA.DataAccess.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("dfac_telefono")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<string>("dfac_tipo_identificacion")
                         .IsRequired()
@@ -1335,6 +1335,13 @@ namespace AtraccionesTuristicas.Backend.LA.DataAccess.Migrations
 
                     b.Property<int>("hor_cupos_disponibles")
                         .HasColumnType("integer");
+
+                    b.Property<string>("hor_dias_semana")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("0,1,2,3,4,5,6");
 
                     b.Property<string>("hor_estado")
                         .IsRequired()
@@ -2049,9 +2056,7 @@ namespace AtraccionesTuristicas.Backend.LA.DataAccess.Migrations
                 {
                     b.HasOne("AtraccionesTuristicas.Backend.LA.DataAccess.Entities.Identity.UsuarioEntity", "Usuario")
                         .WithMany("Clientes")
-                        .HasForeignKey("usu_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("usu_id");
 
                     b.Navigation("Usuario");
                 });

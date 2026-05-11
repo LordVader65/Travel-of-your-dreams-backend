@@ -20,7 +20,7 @@ public sealed class ClienteConfiguration : IEntityTypeConfiguration<ClienteEntit
         builder.Property(x => x.cli_apellidos).HasMaxLength(100);
         builder.Property(x => x.cli_razon_social).HasMaxLength(200);
         builder.Property(x => x.cli_correo).HasMaxLength(150).IsRequired();
-        builder.Property(x => x.cli_telefono).HasMaxLength(20);
+        builder.Property(x => x.cli_telefono).HasMaxLength(10);
         builder.Property(x => x.cli_direccion).HasMaxLength(300);
         builder.Property(x => x.cli_fecha_ingreso).HasDefaultValueSql("CURRENT_TIMESTAMP");
         builder.Property(x => x.cli_usuario_ingreso).HasMaxLength(100).IsRequired();
@@ -29,7 +29,7 @@ public sealed class ClienteConfiguration : IEntityTypeConfiguration<ClienteEntit
         builder.Property(x => x.cli_ip_eliminacion).HasMaxLength(45);
         builder.Property(x => x.cli_estado).HasMaxLength(1).IsFixedLength().HasDefaultValue(DatabaseConstants.EstadoActivo);
         builder.Property(x => x.cli_row_version).HasDefaultValue(1).IsConcurrencyToken();
-        builder.HasOne(x => x.Usuario).WithMany(x => x.Clientes).HasForeignKey(x => x.usu_id);
+        builder.HasOne(x => x.Usuario).WithMany(x => x.Clientes).HasForeignKey(x => x.usu_id).IsRequired(false);
         builder.ToTable(t =>
         {
             t.HasCheckConstraint("ck_clientes_estado", "cli_estado IN ('A','I')");

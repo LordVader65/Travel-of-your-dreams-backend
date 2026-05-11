@@ -15,6 +15,23 @@ public static class UsuarioDataMapper
         Roles = entity.UsuarioRoles
             .Where(x => x.usu_rol_estado == "A" && x.Rol is not null)
             .Select(x => x.Rol!.rol_descripcion)
-            .ToList()
+            .ToList(),
+        ClienteId = entity.Clientes.FirstOrDefault()?.cli_id,
+        ClienteGuid = entity.Clientes.FirstOrDefault()?.cli_guid,
+        ClienteNombre = NombreCliente(entity),
+        ClienteIdentificacion = entity.Clientes.FirstOrDefault()?.cli_numero_identificacion,
+        ClienteCorreo = entity.Clientes.FirstOrDefault()?.cli_correo
     };
+
+    private static string? NombreCliente(UsuarioEntity entity)
+    {
+        var cliente = entity.Clientes.FirstOrDefault();
+        if (cliente is null)
+        {
+            return null;
+        }
+
+        var nombres = string.Join(' ', new[] { cliente.cli_nombres, cliente.cli_apellidos }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        return !string.IsNullOrWhiteSpace(nombres) ? nombres : cliente.cli_razon_social;
+    }
 }

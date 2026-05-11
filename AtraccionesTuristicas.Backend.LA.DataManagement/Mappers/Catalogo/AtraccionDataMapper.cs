@@ -62,6 +62,6 @@ public static class AtraccionDataMapper
         Disponible = entity.at_disponible,
         FreeCancellation = entity.at_free_cancellation,
         SkipTheLine = entity.at_skip_the_line,
-        TotalResenias = entity.at_total_resenias
+        TotalResenias = entity.Resenias.Count(x => x.rsn_estado == "A")
     };
 }

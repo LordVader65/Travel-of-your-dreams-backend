@@ -12,6 +12,12 @@ public sealed class UsuarioDataService : IUsuarioDataService
 
     public UsuarioDataService(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
 
+    public async Task<IReadOnlyList<UsuarioDataModel>> ListarAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _unitOfWork.Usuarios.ListarConRolesYClientesAsync(cancellationToken);
+        return entities.Select(UsuarioDataMapper.ToDataModel).ToList();
+    }
+
     public async Task<UsuarioDataModel?> ObtenerPorGuidAsync(Guid guid, CancellationToken cancellationToken = default)
     {
         var entity = await _unitOfWork.Usuarios.ObtenerPorGuidAsync(guid, cancellationToken);

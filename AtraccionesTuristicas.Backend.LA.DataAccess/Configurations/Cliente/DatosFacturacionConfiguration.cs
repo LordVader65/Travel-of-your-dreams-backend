@@ -21,7 +21,7 @@ public sealed class DatosFacturacionConfiguration : IEntityTypeConfiguration<Dat
         builder.Property(x => x.dfac_nombre).HasMaxLength(100).IsRequired();
         builder.Property(x => x.dfac_apellido).HasMaxLength(100);
         builder.Property(x => x.dfac_correo).HasMaxLength(150).IsRequired();
-        builder.Property(x => x.dfac_telefono).HasMaxLength(20);
+        builder.Property(x => x.dfac_telefono).HasMaxLength(10);
         builder.Property(x => x.dfac_direccion).HasMaxLength(300);
         builder.Property(x => x.dfac_fecha_ingreso).HasDefaultValueSql("CURRENT_TIMESTAMP");
         builder.Property(x => x.dfac_usuario_ingreso).HasMaxLength(100).IsRequired();

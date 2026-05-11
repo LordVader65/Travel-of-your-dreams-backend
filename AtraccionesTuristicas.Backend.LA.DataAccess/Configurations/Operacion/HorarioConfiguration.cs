@@ -21,6 +21,7 @@ public sealed class HorarioConfiguration : IEntityTypeConfiguration<HorarioEntit
         builder.Property(x => x.hor_ip_mod).HasMaxLength(45);
         builder.Property(x => x.hor_usuario_eliminacion).HasMaxLength(100);
         builder.Property(x => x.hor_ip_eliminacion).HasMaxLength(45);
+        builder.Property(x => x.hor_dias_semana).HasMaxLength(20).HasDefaultValue("0,1,2,3,4,5,6");
         builder.Property(x => x.hor_estado).HasMaxLength(1).IsFixedLength().HasDefaultValue(DatabaseConstants.EstadoActivo);
         builder.HasOne(x => x.Atraccion).WithMany(x => x.Horarios).HasForeignKey(x => x.at_id);
         builder.ToTable(t =>

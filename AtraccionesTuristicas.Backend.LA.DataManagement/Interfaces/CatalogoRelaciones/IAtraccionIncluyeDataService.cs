@@ -7,4 +7,5 @@ public interface IAtraccionIncluyeDataService
     Task<IReadOnlyList<AtraccionIncluyeDataModel>> ListarAsync(CancellationToken cancellationToken = default);
     Task<AtraccionIncluyeDataModel> CrearAsync(AtraccionIncluyeDataModel model, CancellationToken cancellationToken = default);
     Task RemoverAsync(int id, CancellationToken cancellationToken = default);
+    Task RemoverAsync(int atraccionId, int incluyeId, CancellationToken cancellationToken = default);
 }

@@ -19,6 +19,10 @@ public sealed class FacturaQueryRepository : IFacturaQueryRepository
     {
         var query = _context.Facturas.AsNoTracking()
             .Include(x => x.Reserva).ThenInclude(x => x!.Cliente)
+            .Include(x => x.Reserva).ThenInclude(x => x!.Horario).ThenInclude(x => x!.Atraccion).ThenInclude(x => x!.Destino)
+            .Include(x => x.Reserva).ThenInclude(x => x!.Detalles).ThenInclude(x => x.Ticket)
+            .Include(x => x.Pago)
+            .Include(x => x.DatosFacturacion)
             .Where(x => x.Reserva != null && x.Reserva.Cliente != null && x.Reserva.Cliente.cli_guid == clienteGuid)
             .OrderByDescending(x => x.fac_fecha_emision);
         var total = await query.CountAsync(cancellationToken);
@@ -39,6 +43,9 @@ public sealed class FacturaQueryRepository : IFacturaQueryRepository
     {
         var query = _context.Facturas.AsNoTracking()
             .Include(x => x.Reserva).ThenInclude(x => x!.Cliente)
+            .Include(x => x.Reserva).ThenInclude(x => x!.Horario).ThenInclude(x => x!.Atraccion).ThenInclude(x => x!.Destino)
+            .Include(x => x.Reserva).ThenInclude(x => x!.Detalles).ThenInclude(x => x.Ticket)
+            .Include(x => x.Pago)
             .Include(x => x.DatosFacturacion)
             .AsQueryable();
 

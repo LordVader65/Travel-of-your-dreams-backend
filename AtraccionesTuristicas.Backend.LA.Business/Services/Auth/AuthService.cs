@@ -44,12 +44,21 @@
         public async Task<RegisterClienteResponse> RegistrarClienteAsync(RegisterClienteRequest request, CancellationToken cancellationToken = default)
         {
             var errors = new List<string>();
-            Support.Guard.Required(request.TipoIdentificacion, "TipoIdentificacion", errors);
+            Support.Guard.IdentificationType(request.TipoIdentificacion, "TipoIdentificacion", errors);
             Support.Guard.Required(request.NumeroIdentificacion, "NumeroIdentificacion", errors);
+            Support.Guard.Phone(request.Telefono, "Telefono", errors);
             Support.Guard.Email(request.Correo, "Correo", errors);
             Support.Guard.Required(request.Password, "Password", errors);
+            Support.Guard.MaxLength(request.NumeroIdentificacion, 20, "NumeroIdentificacion", errors);
+            Support.Guard.MaxLength(request.Nombres, 100, "Nombres", errors);
+            Support.Guard.MaxLength(request.Apellidos, 100, "Apellidos", errors);
+            Support.Guard.MaxLength(request.RazonSocial, 200, "RazonSocial", errors);
+            Support.Guard.MaxLength(request.Correo, 150, "Correo", errors);
+            Support.Guard.MaxLength(request.Telefono, 10, "Telefono", errors);
+            Support.Guard.MaxLength(request.Direccion, 300, "Direccion", errors);
             if (request.Password.Length < 8) errors.Add("Password debe tener al menos 8 caracteres.");
             Support.Guard.ThrowIfAny(errors);
+            request.TipoIdentificacion = request.TipoIdentificacion.Trim().ToUpperInvariant();
 
             if (await _usuarios.ObtenerPorLoginAsync(request.Correo, cancellationToken) is not null) throw new ConflictBusinessException("El correo ya esta registrado como usuario.");
             if (await _clientes.ObtenerPorIdentificacionAsync(request.NumeroIdentificacion, cancellationToken) is not null) throw new ConflictBusinessException("La identificacion ya esta registrada.");

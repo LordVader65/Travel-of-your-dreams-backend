@@ -7,7 +7,7 @@ public sealed class ClienteEntity
 {
     public int cli_id { get; set; }
     public Guid cli_guid { get; set; }
-    public int usu_id { get; set; }
+    public int? usu_id { get; set; }
     public string cli_tipo_identificacion { get; set; } = string.Empty;
     public string cli_numero_identificacion { get; set; } = string.Empty;
     public string? cli_nombres { get; set; }

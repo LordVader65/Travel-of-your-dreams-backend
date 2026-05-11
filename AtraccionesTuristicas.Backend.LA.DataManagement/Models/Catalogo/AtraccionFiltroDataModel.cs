@@ -3,6 +3,8 @@ namespace AtraccionesTuristicas.Backend.LA.DataManagement.Models.Catalogo;
 public sealed class AtraccionFiltroDataModel
 {
     public string? Pais { get; set; }
+    public DateOnly? FechaDesde { get; set; }
+    public DateOnly? FechaHasta { get; set; }
     public string? Tipo { get; set; }
     public string? Subtipo { get; set; }
     public string? Etiqueta { get; set; }

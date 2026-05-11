@@ -17,6 +17,7 @@ DECLARE
     v_total NUMERIC(10,2);
     v_estado VARCHAR(20);
     v_fac_guid UUID;
+    v_fac_dfac_id INTEGER;
     v_numero VARCHAR(20);
 BEGIN
     SELECT rev_id, cli_id, rev_subtotal, rev_valor_iva, rev_total, rev_estado
@@ -32,14 +33,10 @@ BEGIN
         RAISE EXCEPTION 'La reserva debe estar PAGADA o CONFIRMADA para facturar. Estado: %', v_estado;
     END IF;
 
-    SELECT fac_guid
-    INTO v_fac_guid
+    SELECT fac_guid, dfac_id
+    INTO v_fac_guid, v_fac_dfac_id
     FROM facturas
     WHERE rev_id = v_rev_id;
-
-    IF v_fac_guid IS NOT NULL THEN
-        RETURN v_fac_guid;
-    END IF;
 
     SELECT pag_id
     INTO v_pag_id
@@ -59,6 +56,19 @@ BEGIN
         IF v_dfac_id IS NULL THEN
             RAISE EXCEPTION 'Datos de facturación activos no encontrados para el cliente';
         END IF;
+    END IF;
+
+    IF v_fac_guid IS NOT NULL THEN
+        IF p_dfac_guid IS NOT NULL AND v_fac_dfac_id IS NULL THEN
+            UPDATE facturas
+            SET dfac_id = v_dfac_id,
+                fac_fecha_mod = CURRENT_TIMESTAMP,
+                fac_usuario_mod = p_usuario,
+                fac_ip_mod = p_ip
+            WHERE fac_guid = v_fac_guid;
+        END IF;
+
+        RETURN v_fac_guid;
     END IF;
 
     v_numero := CONCAT('FAC-', UPPER(SUBSTRING(REPLACE(gen_random_uuid()::TEXT, '-', ''), 1, 12)));

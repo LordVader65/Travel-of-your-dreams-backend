@@ -14,6 +14,45 @@ public sealed class AuditoriaLogRepository : RepositoryBase<AuditoriaLogEntity>,
     public async Task<IReadOnlyList<AuditoriaLogEntity>> ConsultarPorTablaAsync(string tabla, CancellationToken cancellationToken = default) =>
         await DbSet.AsNoTracking().Where(x => x.log_tabla == tabla).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<AuditoriaLogEntity>> ConsultarAsync(string? tabla, string? operacion, string? usuario, DateTime? desdeUtc, DateTime? hastaUtc, int page, int limit, CancellationToken cancellationToken = default)
+    {
+        var query = Filtrar(tabla, operacion, usuario, desdeUtc, hastaUtc);
+        var skip = (Math.Max(page, 1) - 1) * Math.Clamp(limit, 1, 100);
+        var take = Math.Clamp(limit, 1, 100);
+        return await query.OrderByDescending(x => x.log_fecha_utc).Skip(skip).Take(take).ToListAsync(cancellationToken);
+    }
+
+    public Task<int> ContarAsync(string? tabla, string? operacion, string? usuario, DateTime? desdeUtc, DateTime? hastaUtc, CancellationToken cancellationToken = default) =>
+        Filtrar(tabla, operacion, usuario, desdeUtc, hastaUtc).CountAsync(cancellationToken);
+
+    private IQueryable<AuditoriaLogEntity> Filtrar(string? tabla, string? operacion, string? usuario, DateTime? desdeUtc, DateTime? hastaUtc)
+    {
+        var query = DbSet.AsNoTracking().AsQueryable();
+        desdeUtc = ToUtc(desdeUtc);
+        hastaUtc = ToUtc(hastaUtc);
+        if (!string.IsNullOrWhiteSpace(tabla)) query = query.Where(x => x.log_tabla == tabla);
+        if (!string.IsNullOrWhiteSpace(operacion)) query = query.Where(x => x.log_operacion == operacion);
+        if (!string.IsNullOrWhiteSpace(usuario)) query = query.Where(x => x.log_usuario.Contains(usuario));
+        if (desdeUtc.HasValue) query = query.Where(x => x.log_fecha_utc >= desdeUtc.Value);
+        if (hastaUtc.HasValue) query = query.Where(x => x.log_fecha_utc <= hastaUtc.Value);
+        return query;
+    }
+
+    private static DateTime? ToUtc(DateTime? value)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+
+        return value.Value.Kind switch
+        {
+            DateTimeKind.Utc => value.Value,
+            DateTimeKind.Local => value.Value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+        };
+    }
+
     public async Task<long> RegistrarAuditoriaAsync(
         string tabla,
         string operacion,

@@ -9,6 +9,8 @@ public interface IAtraccionQueryRepository
         int page,
         int limit,
         string? pais = null,
+        DateOnly? fechaDesde = null,
+        DateOnly? fechaHasta = null,
         string? tipo = null,
         string? subtipo = null,
         string? etiqueta = null,

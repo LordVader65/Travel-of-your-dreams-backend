@@ -19,6 +19,10 @@ public sealed class UsuariosController : ApiControllerBase
         _roles = roles;
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Listar(CancellationToken cancellationToken) =>
+        OkEnvelope(await _usuarios.ListarAsync(cancellationToken));
+
     [HttpGet("{guid:guid}")]
     public async Task<IActionResult> Obtener(Guid guid, CancellationToken cancellationToken) =>
         OkEnvelope(await _usuarios.ObtenerPorGuidAsync(guid, cancellationToken));
