@@ -6,5 +6,6 @@ RUN dotnet publish services/ms-atracciones/TravelDreams.MsAtracciones.Api/Travel
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
+ENV ASPNETCORE_Kestrel__EndpointDefaults__Protocols=Http1AndHttp2
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "dotnet TravelDreams.MsAtracciones.Api.dll --urls http://0.0.0.0:${PORT:-8080}"]

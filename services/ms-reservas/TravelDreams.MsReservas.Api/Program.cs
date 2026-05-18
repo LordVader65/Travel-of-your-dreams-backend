@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsReservas.Api.Configuration;
+using TravelDreams.MsReservas.Api.Grpc;
 using TravelDreams.MsReservas.Business;
 using TravelDreams.MsReservas.DataAccess.Context;
 using TravelDreams.MsReservas.DataManagement;
@@ -16,6 +17,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 builder.Services.AddOpenApi();
+builder.Services.AddGrpc();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.AddDbContext<ReservasDbContext>(options => options.UseNpgsql(connectionString));
@@ -30,6 +32,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapHealthChecks("/health");
+app.MapGrpcService<ReservasInternalGrpcService>();
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new
 {

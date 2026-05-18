@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option csharp_namespace = "TravelDreams.Grpc.Atracciones";
+
+package traveldreams.atracciones;
+
+service AtraccionesAvailability {
+  rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
+  rpc ReserveAvailability (ReserveAvailabilityRequest) returns (AvailabilityResult);
+  rpc ReleaseAvailability (ReleaseAvailabilityRequest) returns (AvailabilityResult);
+}
+
+message GetTicketsRequest {
+  string atraccion_guid = 1;
+}
+
+message GetTicketsResponse {
+  repeated TicketItem tickets = 1;
+}
+
+message TicketItem {
+  string guid = 1;
+  string titulo = 2;
+  string tipo_participante = 3;
+  string precio = 4;
+  string moneda = 5;
+  int32 capacidad_maxima = 6;
+}
+
+message ReserveAvailabilityRequest {
+  string horario_guid = 1;
+  repeated AvailabilityLine lines = 2;
+}
+
+message AvailabilityLine {
+  string ticket_guid = 1;
+  int32 cantidad = 2;
+}
+
+message ReleaseAvailabilityRequest {
+  string horario_guid = 1;
+  int32 cantidad = 2;
+}
+
+message AvailabilityResult {
+  bool success = 1;
+  string error = 2;
+  string atraccion_guid = 3;
+  string horario_guid = 4;
+  int32 cupos_restantes = 5;
+}

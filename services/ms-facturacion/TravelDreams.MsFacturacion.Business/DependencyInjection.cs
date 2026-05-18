@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Grpc.Net.Client;
+using TravelDreams.Grpc.Reservas;
 using TravelDreams.MsFacturacion.Business.Interfaces;
 using TravelDreams.MsFacturacion.Business.Services;
 
@@ -8,15 +10,17 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddFacturacionBusiness(this IServiceCollection services)
     {
+        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
         services.AddScoped<IDatosFacturacionService, DatosFacturacionService>();
         services.AddScoped<IPagoService, PagoService>();
         services.AddScoped<IFacturaService, FacturaService>();
-        services.AddHttpClient<IReservasIntegrationClient, ReservasHttpClient>((provider, client) =>
+        services.AddScoped(provider =>
         {
             var configuration = provider.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
-            var baseUrl = configuration["Services:ReservasUrl"] ?? configuration["Services:ReservasGrpcUrl"] ?? "http://localhost:5103";
-            client.BaseAddress = new Uri(baseUrl);
+            var baseUrl = configuration["Services:ReservasGrpcUrl"] ?? configuration["Services:ReservasUrl"] ?? "http://localhost:5103";
+            return new ReservasInternal.ReservasInternalClient(GrpcChannel.ForAddress(baseUrl));
         });
+        services.AddScoped<IReservasIntegrationClient, ReservasGrpcClient>();
         return services;
     }
 }
