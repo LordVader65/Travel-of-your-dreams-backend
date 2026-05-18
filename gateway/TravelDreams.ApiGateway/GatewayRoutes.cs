@@ -10,9 +10,34 @@ public static class GatewayRoutes
             ServiceKey = "FacturacionUrl",
             Methods = ["POST"],
             Prefixes = ["/api/v1/reservas/"],
-            Contains = ["/confirmar-pago"],
+            Contains = ["/confirmar-pago", "/pagos/confirmacion"],
             ValidateTokenWhenPresent = true,
             AllowedRoles = ["CLIENTE", "ADMIN", "BOOKING_INTEGRATION"]
+        },
+        new()
+        {
+            Name = "atracciones-resenias-write",
+            ServiceKey = "AtraccionesUrl",
+            Methods = ["POST"],
+            Prefixes =
+            [
+                "/api/v1/atracciones/"
+            ],
+            Contains = ["/resenias"],
+            RequiresAuthentication = true,
+            AllowedRoles = ["CLIENTE", "ADMIN"]
+        },
+        new()
+        {
+            Name = "resenias-write",
+            ServiceKey = "AtraccionesUrl",
+            Methods = ["POST"],
+            Prefixes =
+            [
+                "/api/v1/resenias"
+            ],
+            RequiresAuthentication = true,
+            AllowedRoles = ["CLIENTE", "ADMIN"]
         },
         new()
         {

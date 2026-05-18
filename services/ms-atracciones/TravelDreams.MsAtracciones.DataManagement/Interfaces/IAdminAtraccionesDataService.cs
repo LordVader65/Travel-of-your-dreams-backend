@@ -30,6 +30,7 @@ public interface IAdminAtraccionesDataService
     Task<bool> DesactivarHorarioAsync(Guid guid, string usuario, CancellationToken ct = default);
 
     Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default);
     Task<ReseniaDataModel> CrearReseniaAsync(CrearReseniaDataModel model, CancellationToken ct = default);
     Task<bool> CambiarEstadoReseniaAsync(Guid guid, string estado, string usuario, CancellationToken ct = default);
 }

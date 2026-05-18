@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
@@ -20,6 +21,10 @@
     <ProjectReference Include="..\TravelDreams.MsReservas.Business\TravelDreams.MsReservas.Business.csproj" />
     <ProjectReference Include="..\TravelDreams.MsReservas.DataAccess\TravelDreams.MsReservas.DataAccess.csproj" />
     <ProjectReference Include="..\TravelDreams.MsReservas.DataManagement\TravelDreams.MsReservas.DataManagement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\..\..\contracts\grpc\reservas_internal.proto" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>

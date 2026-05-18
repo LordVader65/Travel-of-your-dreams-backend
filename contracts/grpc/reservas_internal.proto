@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+option csharp_namespace = "TravelDreams.Grpc.Reservas";
+
+package traveldreams.reservas;
+
+service ReservasInternal {
+  rpc GetPaymentSnapshot (ReservaGuidRequest) returns (PaymentSnapshotResponse);
+  rpc GetClienteByUsuario (UsuarioGuidRequest) returns (ClienteLookupResponse);
+  rpc MarkAsPaid (MarkAsPaidRequest) returns (OperationResult);
+}
+
+message ReservaGuidRequest {
+  string reserva_guid = 1;
+}
+
+message UsuarioGuidRequest {
+  string usuario_guid = 1;
+}
+
+message PaymentSnapshotResponse {
+  bool found = 1;
+  string reserva_guid = 2;
+  string cliente_guid = 3;
+  string estado = 4;
+  string fecha_expiracion_utc = 5;
+  string subtotal = 6;
+  string valor_iva = 7;
+  string total = 8;
+  string moneda = 9;
+}
+
+message ClienteLookupResponse {
+  bool found = 1;
+  string cliente_guid = 2;
+}
+
+message MarkAsPaidRequest {
+  string reserva_guid = 1;
+  string pago_guid = 2;
+  string factura_guid = 3;
+}
+
+message OperationResult {
+  bool success = 1;
+  string error = 2;
+}

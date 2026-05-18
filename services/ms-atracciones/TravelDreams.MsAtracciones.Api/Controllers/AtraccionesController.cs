@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TravelDreams.MsAtracciones.Business.DTOs;
 using TravelDreams.MsAtracciones.Business.Interfaces;
 
 namespace TravelDreams.MsAtracciones.Api.Controllers;
@@ -59,5 +60,53 @@ public sealed class AtraccionesController : ControllerBase
     {
         var data = await _atracciones.ListarHorariosPorAtraccionAsync(guid, cancellationToken);
         return Ok(new { status = StatusCodes.Status200OK, data });
+    }
+
+    [HttpGet("{guid:guid}/horarios")]
+    public async Task<IActionResult> HorariosContrato(Guid guid, [FromQuery] bool disponibles = true, CancellationToken cancellationToken = default)
+    {
+        var data = await _atracciones.ListarHorariosPorAtraccionAsync(guid, cancellationToken);
+        return Ok(new { status = StatusCodes.Status200OK, data });
+    }
+
+    [HttpGet("{guid:guid}/horarios/{horarioGuid:guid}/tickets")]
+    public async Task<IActionResult> TicketsPorHorario(Guid guid, Guid horarioGuid, CancellationToken cancellationToken)
+    {
+        var horarios = await _atracciones.ListarHorariosPorAtraccionAsync(guid, cancellationToken);
+        var horario = horarios.FirstOrDefault(x => x.Guid == horarioGuid);
+        if (horario is null)
+        {
+            return NotFound(new { status = StatusCodes.Status404NotFound, error = "Horario no encontrado o sin disponibilidad." });
+        }
+
+        var tickets = await _atracciones.ListarTicketsAsync(guid, cancellationToken);
+        var data = tickets.Select(ticket => new TicketHorarioResponse
+        {
+            Guid = ticket.Guid,
+            Titulo = ticket.Titulo,
+            TipoParticipante = ticket.TipoParticipante,
+            Precio = ticket.Precio,
+            Moneda = ticket.Moneda,
+            CapacidadMaxima = ticket.CapacidadMaxima,
+            HorarioGuid = horario.Guid,
+            CuposDisponibles = Math.Min(ticket.CapacidadMaxima, horario.CuposDisponibles)
+        });
+
+        return Ok(new { status = StatusCodes.Status200OK, data });
+    }
+
+    [HttpGet("{guid:guid}/resenias")]
+    public async Task<IActionResult> Resenias(Guid guid, CancellationToken cancellationToken)
+    {
+        var data = await _admin.ListarReseniasPorAtraccionAsync(guid, cancellationToken);
+        return Ok(new { status = StatusCodes.Status200OK, data });
+    }
+
+    [HttpPost("{guid:guid}/resenias")]
+    public async Task<IActionResult> CrearResenia(Guid guid, CrearReseniaRequest request, CancellationToken cancellationToken)
+    {
+        request.AtraccionGuid = guid;
+        var data = await _admin.CrearReseniaAsync(request, cancellationToken);
+        return Created(string.Empty, new { status = StatusCodes.Status201Created, data });
     }
 }
