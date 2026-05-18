@@ -69,6 +69,9 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
     public Task<bool> DesactivarHorarioAsync(Guid guid, CancellationToken ct = default) => _data.DesactivarHorarioAsync(guid, "admin", ct);
 
     public async Task<object> ListarReseniasAsync(CancellationToken ct = default) => await _data.ListarReseniasAsync(ct);
+    public async Task<object> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default) =>
+        await _data.ListarReseniasPorAtraccionAsync(atraccionGuid, ct);
+
     public async Task<object> CrearReseniaAsync(CrearReseniaRequest request, CancellationToken ct = default)
     {
         if (request.Rating is < 1 or > 5) throw new InvalidOperationException("La calificacion debe estar entre 1 y 5.");

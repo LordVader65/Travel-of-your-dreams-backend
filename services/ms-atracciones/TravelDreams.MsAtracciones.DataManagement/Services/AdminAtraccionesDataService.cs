@@ -196,6 +196,13 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
         await _db.Resenias.AsNoTracking().Where(x => x.rsn_estado == "A").OrderByDescending(x => x.rsn_fecha_creacion)
             .Select(x => new ReseniaDataModel { Guid = x.rsn_guid, AtraccionGuid = x.Atraccion!.at_guid, ReservaGuid = x.rev_guid, Comentario = x.rsn_comentario, Rating = x.rsn_rating, FechaCreacion = x.rsn_fecha_creacion, Estado = x.rsn_estado }).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default) =>
+        await _db.Resenias.AsNoTracking()
+            .Where(x => x.rsn_estado == "A" && x.Atraccion != null && x.Atraccion.at_guid == atraccionGuid)
+            .OrderByDescending(x => x.rsn_fecha_creacion)
+            .Select(x => new ReseniaDataModel { Guid = x.rsn_guid, AtraccionGuid = x.Atraccion!.at_guid, ReservaGuid = x.rev_guid, Comentario = x.rsn_comentario, Rating = x.rsn_rating, FechaCreacion = x.rsn_fecha_creacion, Estado = x.rsn_estado })
+            .ToListAsync(ct);
+
     public async Task<ReseniaDataModel> CrearReseniaAsync(CrearReseniaDataModel model, CancellationToken ct = default)
     {
         var atraccion = await _db.Atracciones.FirstOrDefaultAsync(x => x.at_guid == model.AtraccionGuid && x.at_estado == "A", ct)

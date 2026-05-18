@@ -26,6 +26,10 @@ public sealed class PagosController : ControllerBase
         return Created(string.Empty, new { status = StatusCodes.Status201Created, data });
     }
 
+    [HttpPost("reservas/{guid:guid}/pagos/confirmacion")]
+    public async Task<IActionResult> ConfirmarPagoContratoBooking(Guid guid, ConfirmarPagoReceptorRequest request, CancellationToken ct) =>
+        await ConfirmarPagoReceptor(guid, request, ct);
+
     [HttpGet("pagos")]
     public async Task<IActionResult> MisPagos([FromServices] IReservasIntegrationClient reservas, [FromQuery] Guid clienteGuid, [FromQuery] int page = 1, [FromQuery] int limit = 20, CancellationToken ct = default)
     {
