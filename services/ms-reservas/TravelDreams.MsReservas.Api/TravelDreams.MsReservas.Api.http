@@ -1,0 +1,6 @@
+@TravelDreams.MsReservas.Api_HostAddress = http://localhost:5057
+
+GET {{TravelDreams.MsReservas.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

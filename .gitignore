@@ -4,6 +4,7 @@
 
 bin/
 obj/
+.tmp-build/
 .vs/
 *.user
 *.suo

@@ -1,9 +1,42 @@
 <Solution>
-  <Folder Name="/src/">
+  <Folder Name="/monolith/">
     <Project Path="AtraccionesTuristicas.Backend.LA.Api/AtraccionesTuristicas.Backend.LA.Api.csproj" />
     <Project Path="AtraccionesTuristicas.Backend.LA.Business/AtraccionesTuristicas.Backend.LA.Business.csproj" />
     <Project Path="AtraccionesTuristicas.Backend.LA.DataAccess/AtraccionesTuristicas.Backend.LA.DataAccess.csproj" />
     <Project Path="AtraccionesTuristicas.Backend.LA.DataManagement/AtraccionesTuristicas.Backend.LA.DataManagement.csproj" />
+  </Folder>
+  <Folder Name="/gateway/">
+    <Project Path="gateway/TravelDreams.ApiGateway/TravelDreams.ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/services/ms-identidad/">
+    <Project Path="services/ms-identidad/TravelDreams.MsIdentidad.Api/TravelDreams.MsIdentidad.Api.csproj" />
+    <Project Path="services/ms-identidad/TravelDreams.MsIdentidad.Business/TravelDreams.MsIdentidad.Business.csproj" />
+    <Project Path="services/ms-identidad/TravelDreams.MsIdentidad.DataAccess/TravelDreams.MsIdentidad.DataAccess.csproj" />
+    <Project Path="services/ms-identidad/TravelDreams.MsIdentidad.DataManagement/TravelDreams.MsIdentidad.DataManagement.csproj" />
+  </Folder>
+  <Folder Name="/services/ms-atracciones/">
+    <Project Path="services/ms-atracciones/TravelDreams.MsAtracciones.Api/TravelDreams.MsAtracciones.Api.csproj" />
+    <Project Path="services/ms-atracciones/TravelDreams.MsAtracciones.Business/TravelDreams.MsAtracciones.Business.csproj" />
+    <Project Path="services/ms-atracciones/TravelDreams.MsAtracciones.DataAccess/TravelDreams.MsAtracciones.DataAccess.csproj" />
+    <Project Path="services/ms-atracciones/TravelDreams.MsAtracciones.DataManagement/TravelDreams.MsAtracciones.DataManagement.csproj" />
+  </Folder>
+  <Folder Name="/services/ms-reservas/">
+    <Project Path="services/ms-reservas/TravelDreams.MsReservas.Api/TravelDreams.MsReservas.Api.csproj" />
+    <Project Path="services/ms-reservas/TravelDreams.MsReservas.Business/TravelDreams.MsReservas.Business.csproj" />
+    <Project Path="services/ms-reservas/TravelDreams.MsReservas.DataAccess/TravelDreams.MsReservas.DataAccess.csproj" />
+    <Project Path="services/ms-reservas/TravelDreams.MsReservas.DataManagement/TravelDreams.MsReservas.DataManagement.csproj" />
+  </Folder>
+  <Folder Name="/services/ms-facturacion/">
+    <Project Path="services/ms-facturacion/TravelDreams.MsFacturacion.Api/TravelDreams.MsFacturacion.Api.csproj" />
+    <Project Path="services/ms-facturacion/TravelDreams.MsFacturacion.Business/TravelDreams.MsFacturacion.Business.csproj" />
+    <Project Path="services/ms-facturacion/TravelDreams.MsFacturacion.DataAccess/TravelDreams.MsFacturacion.DataAccess.csproj" />
+    <Project Path="services/ms-facturacion/TravelDreams.MsFacturacion.DataManagement/TravelDreams.MsFacturacion.DataManagement.csproj" />
+  </Folder>
+  <Folder Name="/services/ms-auditoria/">
+    <Project Path="services/ms-auditoria/TravelDreams.MsAuditoria.Api/TravelDreams.MsAuditoria.Api.csproj" />
+    <Project Path="services/ms-auditoria/TravelDreams.MsAuditoria.Business/TravelDreams.MsAuditoria.Business.csproj" />
+    <Project Path="services/ms-auditoria/TravelDreams.MsAuditoria.DataAccess/TravelDreams.MsAuditoria.DataAccess.csproj" />
+    <Project Path="services/ms-auditoria/TravelDreams.MsAuditoria.DataManagement/TravelDreams.MsAuditoria.DataManagement.csproj" />
   </Folder>
   <Folder Name="/tests/" />
 </Solution>

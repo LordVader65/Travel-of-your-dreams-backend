@@ -1,0 +1,6 @@
+@TravelDreams.MsAuditoria.Api_HostAddress = http://localhost:5283
+
+GET {{TravelDreams.MsAuditoria.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
