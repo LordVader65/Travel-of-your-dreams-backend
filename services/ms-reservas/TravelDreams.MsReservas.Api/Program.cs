@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsReservas.Api.Configuration;
 using TravelDreams.MsReservas.Api.Grpc;
+using TravelDreams.MsReservas.Api.Middleware;
 using TravelDreams.MsReservas.Business;
 using TravelDreams.MsReservas.DataAccess.Context;
 using TravelDreams.MsReservas.DataManagement;
@@ -32,6 +33,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseGrpcWeb();
+app.UseMiddleware<ApiExceptionMiddleware>();
 
 app.MapHealthChecks("/health");
 app.MapGrpcService<ReservasInternalGrpcService>().EnableGrpcWeb();
