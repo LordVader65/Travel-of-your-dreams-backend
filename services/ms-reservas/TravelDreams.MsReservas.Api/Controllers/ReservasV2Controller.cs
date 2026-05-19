@@ -106,9 +106,9 @@ public sealed class ReservasV2Controller : ControllerBase
     {
         rev_guid = reserva.Guid,
         rev_codigo = reserva.Codigo,
-        hor_fecha = (DateOnly?)null,
-        hor_hora_inicio = (string?)null,
-        atraccion_nombre = (string?)null,
+        hor_fecha = reserva.HorFecha,
+        hor_hora_inicio = FormatTime(reserva.HorHoraInicio),
+        atraccion_nombre = reserva.AtraccionNombre,
         rev_total = reserva.Total,
         moneda = reserva.Moneda,
         rev_estado = reserva.Estado,
@@ -119,10 +119,10 @@ public sealed class ReservasV2Controller : ControllerBase
     {
         rev_guid = reserva.Guid,
         rev_codigo = reserva.Codigo,
-        hor_fecha = (DateOnly?)null,
-        hor_hora_inicio = (string?)null,
-        hor_hora_fin = (string?)null,
-        atraccion_nombre = (string?)null,
+        hor_fecha = reserva.HorFecha,
+        hor_hora_inicio = FormatTime(reserva.HorHoraInicio),
+        hor_hora_fin = FormatTime(reserva.HorHoraFin),
+        atraccion_nombre = reserva.AtraccionNombre,
         rev_subtotal = reserva.Subtotal,
         rev_valor_iva = reserva.ValorIva,
         rev_total = reserva.Total,
@@ -177,6 +177,8 @@ public sealed class ReservasV2Controller : ControllerBase
         timestamp = DateTime.UtcNow,
         path = Request.Path.Value
     };
+
+    private static string? FormatTime(TimeOnly? time) => time?.ToString("HH:mm");
 }
 
 public sealed class CrearReservaV2Request

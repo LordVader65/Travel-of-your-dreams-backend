@@ -51,6 +51,7 @@ public sealed class ReservasService : IReservasService
             }, ct)).Guid;
         }
 
+        var context = await _atracciones.GetReservationContextAsync(request.AtraccionGuid, request.HorarioGuid, ct);
         var tickets = await _atracciones.GetTicketsAsync(request.AtraccionGuid, ct);
         var lineas = new List<CrearReservaLineaDataModel>();
         foreach (var linea in request.Lineas)
@@ -72,6 +73,10 @@ public sealed class ReservasService : IReservasService
                 ClienteGuid = clienteGuid!.Value,
                 AtraccionGuid = request.AtraccionGuid,
                 HorarioGuid = request.HorarioGuid,
+                AtraccionNombre = context.AtraccionNombre,
+                HorFecha = context.HorFecha,
+                HorHoraInicio = context.HorHoraInicio,
+                HorHoraFin = context.HorHoraFin,
                 Lineas = lineas,
                 OrigenCanal = request.OrigenCanal,
                 ExpiracionMinutos = request.ExpiracionMinutos,
@@ -115,6 +120,10 @@ public sealed class ReservasService : IReservasService
         ClienteGuid = model.ClienteGuid,
         AtraccionGuid = model.AtraccionGuid,
         HorarioGuid = model.HorarioGuid,
+        AtraccionNombre = model.AtraccionNombre,
+        HorFecha = model.HorFecha,
+        HorHoraInicio = model.HorHoraInicio,
+        HorHoraFin = model.HorHoraFin,
         FechaReservaUtc = model.FechaReservaUtc,
         FechaExpiracionUtc = model.FechaExpiracionUtc,
         Subtotal = model.Subtotal,

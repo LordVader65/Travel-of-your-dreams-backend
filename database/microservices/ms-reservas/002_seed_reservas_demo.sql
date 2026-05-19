@@ -13,6 +13,7 @@ ON CONFLICT (cli_numero_identificacion) DO NOTHING;
 
 INSERT INTO reservas (
     rev_guid, rev_codigo, cli_id, at_guid, hor_guid,
+    rev_atraccion_nombre, rev_hor_fecha, rev_hor_hora_inicio, rev_hor_hora_fin,
     rev_fecha_reserva_utc, rev_fecha_expiracion_utc,
     rev_subtotal, rev_valor_iva, rev_total, rev_moneda, rev_origen_canal,
     rev_usuario_ingreso, rev_ip_ingreso, rev_estado
@@ -20,6 +21,7 @@ INSERT INTO reservas (
 SELECT
     '30000000-0000-0000-0000-000000000001', 'RSV-SEED-001', c.cli_id,
     '40000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001',
+    'Tour Centro Historico de Quito', DATE '2030-01-01', TIME '09:00', TIME '12:00',
     CURRENT_TIMESTAMP, TIMESTAMPTZ '2030-01-01T23:59:00Z',
     25.00, 3.00, 28.00, 'USD', 'WEB',
     'seed-demo', '127.0.0.1', 'PENDIENTE'
@@ -29,6 +31,7 @@ ON CONFLICT (rev_codigo) DO NOTHING;
 
 INSERT INTO reservas (
     rev_guid, rev_codigo, cli_id, at_guid, hor_guid,
+    rev_atraccion_nombre, rev_hor_fecha, rev_hor_hora_inicio, rev_hor_hora_fin,
     rev_fecha_reserva_utc, rev_fecha_expiracion_utc,
     rev_subtotal, rev_valor_iva, rev_total, rev_moneda, rev_origen_canal,
     rev_usuario_ingreso, rev_ip_ingreso, rev_estado
@@ -36,6 +39,7 @@ INSERT INTO reservas (
 SELECT
     '30000000-0000-0000-0000-000000000002', 'RSV-SEED-002', c.cli_id,
     '40000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000002',
+    'Ruta de Cascadas en Banos', DATE '2030-01-02', TIME '10:00', TIME '14:00',
     CURRENT_TIMESTAMP, TIMESTAMPTZ '2030-01-02T23:59:00Z',
     35.00, 4.20, 39.20, 'USD', 'BOOKING',
     'seed-demo', '127.0.0.1', 'PAGADA'

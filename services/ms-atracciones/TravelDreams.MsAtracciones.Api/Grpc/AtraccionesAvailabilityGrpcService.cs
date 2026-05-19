@@ -1,5 +1,7 @@
 using Grpc.Core;
+using Microsoft.EntityFrameworkCore;
 using TravelDreams.Grpc.Atracciones;
+using TravelDreams.MsAtracciones.DataAccess.Context;
 using TravelDreams.MsAtracciones.Business.DTOs;
 using TravelDreams.MsAtracciones.Business.Interfaces;
 
@@ -9,11 +11,13 @@ public sealed class AtraccionesAvailabilityGrpcService : AtraccionesAvailability
 {
     private readonly IAtraccionesPublicService _atracciones;
     private readonly IAvailabilityService _availability;
+    private readonly AtraccionesDbContext _db;
 
-    public AtraccionesAvailabilityGrpcService(IAtraccionesPublicService atracciones, IAvailabilityService availability)
+    public AtraccionesAvailabilityGrpcService(IAtraccionesPublicService atracciones, IAvailabilityService availability, AtraccionesDbContext db)
     {
         _atracciones = atracciones;
         _availability = availability;
+        _db = db;
     }
 
     public override async Task<GetTicketsResponse> GetTickets(GetTicketsRequest request, ServerCallContext context)
@@ -36,6 +40,49 @@ public sealed class AtraccionesAvailabilityGrpcService : AtraccionesAvailability
         }));
 
         return response;
+    }
+
+    public override async Task<ReservationContextResponse> GetReservationContext(ReservationContextRequest request, ServerCallContext context)
+    {
+        if (!Guid.TryParse(request.AtraccionGuid, out var atraccionGuid) ||
+            !Guid.TryParse(request.HorarioGuid, out var horarioGuid))
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "AtraccionGuid y HorarioGuid son obligatorios."));
+        }
+
+        var data = await _db.Horarios
+            .AsNoTracking()
+            .Where(x => x.hor_guid == horarioGuid
+                && x.hor_estado == "A"
+                && x.Atraccion != null
+                && x.Atraccion.at_guid == atraccionGuid
+                && x.Atraccion.at_estado == "A")
+            .Select(x => new
+            {
+                AtraccionGuid = x.Atraccion!.at_guid,
+                HorarioGuid = x.hor_guid,
+                AtraccionNombre = x.Atraccion.at_nombre,
+                Fecha = x.hor_fecha,
+                HoraInicio = x.hor_hora_inicio,
+                HoraFin = x.hor_hora_fin
+            })
+            .FirstOrDefaultAsync(context.CancellationToken);
+
+        if (data is null)
+        {
+            return new ReservationContextResponse { Found = false };
+        }
+
+        return new ReservationContextResponse
+        {
+            Found = true,
+            AtraccionGuid = data.AtraccionGuid.ToString(),
+            HorarioGuid = data.HorarioGuid.ToString(),
+            AtraccionNombre = data.AtraccionNombre,
+            HorFecha = data.Fecha.ToString("yyyy-MM-dd"),
+            HorHoraInicio = data.HoraInicio.ToString("HH:mm"),
+            HorHoraFin = data.HoraFin?.ToString("HH:mm") ?? string.Empty
+        };
     }
 
     public override async Task<AvailabilityResult> ReserveAvailability(TravelDreams.Grpc.Atracciones.ReserveAvailabilityRequest request, ServerCallContext context)

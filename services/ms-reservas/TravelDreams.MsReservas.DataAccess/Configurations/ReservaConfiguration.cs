@@ -18,6 +18,7 @@ public sealed class ReservaConfiguration : IEntityTypeConfiguration<ReservaEntit
         builder.HasIndex(x => x.hor_guid);
         builder.Property(x => x.rev_guid).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(x => x.rev_codigo).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.rev_atraccion_nombre).HasMaxLength(200);
         builder.Property(x => x.rev_fecha_reserva_utc).HasDefaultValueSql("CURRENT_TIMESTAMP");
         builder.Property(x => x.rev_subtotal).HasPrecision(10, 2);
         builder.Property(x => x.rev_valor_iva).HasPrecision(10, 2);
