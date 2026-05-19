@@ -31,8 +31,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseGrpcWeb();
+
 app.MapHealthChecks("/health");
-app.MapGrpcService<AtraccionesAvailabilityGrpcService>();
+app.MapGrpcService<AtraccionesAvailabilityGrpcService>().EnableGrpcWeb();
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new
 {
