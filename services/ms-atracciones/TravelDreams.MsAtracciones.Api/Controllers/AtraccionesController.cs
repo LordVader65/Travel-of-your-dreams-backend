@@ -98,7 +98,7 @@ public sealed class AtraccionesController : ControllerBase
     [HttpGet("{guid:guid}/resenias")]
     public async Task<IActionResult> Resenias(Guid guid, CancellationToken cancellationToken)
     {
-        var data = await _admin.ListarReseniasPorAtraccionAsync(guid, cancellationToken);
+        var data = ToReseniaResponse(await _admin.ListarReseniasPorAtraccionAsync(guid, cancellationToken));
         return Ok(new { status = StatusCodes.Status200OK, data });
     }
 
@@ -106,7 +106,30 @@ public sealed class AtraccionesController : ControllerBase
     public async Task<IActionResult> CrearResenia(Guid guid, CrearReseniaRequest request, CancellationToken cancellationToken)
     {
         request.AtraccionGuid = guid;
-        var data = await _admin.CrearReseniaAsync(request, cancellationToken);
+        var data = ToReseniaResponse(await _admin.CrearReseniaAsync(request, cancellationToken));
         return Created(string.Empty, new { status = StatusCodes.Status201Created, data });
     }
+
+    private static object ToReseniaResponse(object data)
+    {
+        if (data is IEnumerable<dynamic> list)
+        {
+            return list.Select(ToReseniaItem).ToList();
+        }
+
+        return ToReseniaItem(data);
+    }
+
+    private static object ToReseniaItem(dynamic item) => new
+    {
+        guid = item.Guid,
+        clienteId = item.ClienteId,
+        atraccionId = item.AtraccionId,
+        atraccionGuid = item.AtraccionGuid,
+        reservaGuid = item.ReservaGuid,
+        calificacion = item.Calificacion,
+        comentario = item.Comentario,
+        fecha = item.Fecha,
+        estado = item.Estado
+    };
 }

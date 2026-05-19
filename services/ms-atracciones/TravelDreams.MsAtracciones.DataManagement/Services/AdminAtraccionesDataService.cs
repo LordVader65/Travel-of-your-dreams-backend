@@ -192,16 +192,52 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
         entity.hor_estado = "I"; entity.hor_fecha_eliminacion = DateTime.UtcNow; entity.hor_usuario_eliminacion = usuario; await _db.SaveChangesAsync(ct); return true;
     }
 
-    public async Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasAsync(CancellationToken ct = default) =>
-        await _db.Resenias.AsNoTracking().Where(x => x.rsn_estado == "A").OrderByDescending(x => x.rsn_fecha_creacion)
-            .Select(x => new ReseniaDataModel { Guid = x.rsn_guid, AtraccionGuid = x.Atraccion!.at_guid, ReservaGuid = x.rev_guid, Comentario = x.rsn_comentario, Rating = x.rsn_rating, FechaCreacion = x.rsn_fecha_creacion, Estado = x.rsn_estado }).ToListAsync(ct);
+    public async Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasAsync(CancellationToken ct = default)
+    {
+        var data = await _db.Resenias.AsNoTracking().Where(x => x.rsn_estado == "A").OrderByDescending(x => x.rsn_fecha_creacion)
+            .Select(x => new ReseniaDataModel
+            {
+                Guid = x.rsn_guid,
+                ClienteId = 0,
+                AtraccionId = x.at_id,
+                AtraccionGuid = x.Atraccion!.at_guid,
+                ReservaGuid = x.rev_guid,
+                Calificacion = x.rsn_rating,
+                Comentario = x.rsn_comentario,
+                Rating = x.rsn_rating,
+                Fecha = x.rsn_fecha_creacion,
+                FechaCreacion = x.rsn_fecha_creacion,
+                UsuarioCreacion = x.rsn_usuario_creacion,
+                Estado = x.rsn_estado
+            }).ToListAsync(ct);
 
-    public async Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default) =>
-        await _db.Resenias.AsNoTracking()
+        return data.Select(CompleteClienteId).ToList();
+    }
+
+    public async Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default)
+    {
+        var data = await _db.Resenias.AsNoTracking()
             .Where(x => x.rsn_estado == "A" && x.Atraccion != null && x.Atraccion.at_guid == atraccionGuid)
             .OrderByDescending(x => x.rsn_fecha_creacion)
-            .Select(x => new ReseniaDataModel { Guid = x.rsn_guid, AtraccionGuid = x.Atraccion!.at_guid, ReservaGuid = x.rev_guid, Comentario = x.rsn_comentario, Rating = x.rsn_rating, FechaCreacion = x.rsn_fecha_creacion, Estado = x.rsn_estado })
+            .Select(x => new ReseniaDataModel
+            {
+                Guid = x.rsn_guid,
+                ClienteId = 0,
+                AtraccionId = x.at_id,
+                AtraccionGuid = x.Atraccion!.at_guid,
+                ReservaGuid = x.rev_guid,
+                Calificacion = x.rsn_rating,
+                Comentario = x.rsn_comentario,
+                Rating = x.rsn_rating,
+                Fecha = x.rsn_fecha_creacion,
+                FechaCreacion = x.rsn_fecha_creacion,
+                UsuarioCreacion = x.rsn_usuario_creacion,
+                Estado = x.rsn_estado
+            })
             .ToListAsync(ct);
+
+        return data.Select(CompleteClienteId).ToList();
+    }
 
     public async Task<ReseniaDataModel> CrearReseniaAsync(CrearReseniaDataModel model, CancellationToken ct = default)
     {
@@ -210,7 +246,21 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
         var entity = new ReseniaEntity { at_id = atraccion.at_id, rev_guid = model.ReservaGuid, rsn_comentario = model.Comentario, rsn_rating = model.Rating, rsn_usuario_creacion = model.Usuario, rsn_ip_creacion = model.Ip };
         _db.Resenias.Add(entity); atraccion.at_total_resenias += 1;
         await _db.SaveChangesAsync(ct);
-        return new ReseniaDataModel { Guid = entity.rsn_guid, AtraccionGuid = atraccion.at_guid, ReservaGuid = entity.rev_guid, Comentario = entity.rsn_comentario, Rating = entity.rsn_rating, FechaCreacion = entity.rsn_fecha_creacion, Estado = entity.rsn_estado };
+        return new ReseniaDataModel
+        {
+            Guid = entity.rsn_guid,
+            ClienteId = model.ClienteId ?? 0,
+            AtraccionId = atraccion.at_id,
+            AtraccionGuid = atraccion.at_guid,
+            ReservaGuid = entity.rev_guid,
+            Calificacion = entity.rsn_rating,
+            Comentario = entity.rsn_comentario,
+            Rating = entity.rsn_rating,
+            Fecha = entity.rsn_fecha_creacion,
+            FechaCreacion = entity.rsn_fecha_creacion,
+            UsuarioCreacion = entity.rsn_usuario_creacion,
+            Estado = entity.rsn_estado
+        };
     }
 
     public async Task<bool> CambiarEstadoReseniaAsync(Guid guid, string estado, string usuario, CancellationToken ct = default)
@@ -223,4 +273,16 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
     {
         Id = x.at_id, Guid = x.at_guid, DestinoId = x.des_id, Nombre = x.at_nombre, Descripcion = x.at_descripcion, Direccion = x.at_direccion, DuracionMinutos = x.at_duracion_minutos, PuntoEncuentro = x.at_punto_encuentro, PrecioReferencia = x.at_precio_referencia, IncluyeAcompaniante = x.at_incluye_acompaniante, IncluyeTransporte = x.at_incluye_transporte, Disponible = x.at_disponible, FreeCancellation = x.at_free_cancellation, SkipTheLine = x.at_skip_the_line, Estado = x.at_estado
     };
+
+    private static ReseniaDataModel CompleteClienteId(ReseniaDataModel model)
+    {
+        if (!string.IsNullOrWhiteSpace(model.UsuarioCreacion)
+            && model.UsuarioCreacion.StartsWith("booking:", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(model.UsuarioCreacion["booking:".Length..], out var clienteId))
+        {
+            model.ClienteId = clienteId;
+        }
+
+        return model;
+    }
 }

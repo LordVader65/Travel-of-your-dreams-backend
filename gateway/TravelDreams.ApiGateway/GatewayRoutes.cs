@@ -24,8 +24,8 @@ public static class GatewayRoutes
                 "/api/v1/atracciones/"
             ],
             Contains = ["/resenias"],
-            RequiresAuthentication = true,
-            AllowedRoles = ["CLIENTE", "ADMIN"]
+            ValidateTokenWhenPresent = true,
+            AllowedRoles = ["CLIENTE", "ADMIN", "BOOKING_INTEGRATION"]
         },
         new()
         {
