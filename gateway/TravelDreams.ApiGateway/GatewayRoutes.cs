@@ -6,6 +6,39 @@ public static class GatewayRoutes
     [
         new()
         {
+            Name = "v2-facturacion-reservas",
+            ServiceKey = "FacturacionUrl",
+            Methods = ["POST"],
+            Prefixes = ["/api/v2/reservas/"],
+            Contains = ["/pagos/confirmacion"]
+        },
+        new()
+        {
+            Name = "v2-reservas-post",
+            ServiceKey = "ReservasUrl",
+            Methods = ["POST"],
+            Prefixes = ["/api/v2/reservas"],
+            ValidateTokenWhenPresent = true,
+            AllowedRoles = ["CLIENTE", "ADMIN", "BOOKING_INTEGRATION"]
+        },
+        new()
+        {
+            Name = "v2-reservas",
+            ServiceKey = "ReservasUrl",
+            Methods = ["GET"],
+            Prefixes = ["/api/v2/reservas"],
+            RequiresAuthentication = true,
+            AllowedRoles = ["CLIENTE", "ADMIN"]
+        },
+        new()
+        {
+            Name = "v2-atracciones",
+            ServiceKey = "AtraccionesUrl",
+            Methods = ["GET"],
+            Prefixes = ["/api/v2/atracciones"]
+        },
+        new()
+        {
             Name = "facturacion-reservas",
             ServiceKey = "FacturacionUrl",
             Methods = ["POST"],
