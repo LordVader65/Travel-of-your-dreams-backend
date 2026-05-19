@@ -6,6 +6,7 @@ public interface IReservasDataService
 {
     Task<ClienteDataModel> UpsertClienteAsync(ClienteDataModel model, CancellationToken ct = default);
     Task<IReadOnlyList<ReservaDataModel>> ListarAsync(Guid? clienteGuid, string? estado, CancellationToken ct = default);
+    Task<IReadOnlyList<ReservaDataModel>> ListarPorCanalAsync(string origenCanal, string? estado, CancellationToken ct = default);
     Task<ReservaDataModel?> ObtenerAsync(Guid reservaGuid, CancellationToken ct = default);
     Task<Guid> CrearAsync(CrearReservaDataModel model, CancellationToken ct = default);
     Task<bool> CancelarAsync(Guid reservaGuid, string motivo, string usuario, string ip, CancellationToken ct = default);

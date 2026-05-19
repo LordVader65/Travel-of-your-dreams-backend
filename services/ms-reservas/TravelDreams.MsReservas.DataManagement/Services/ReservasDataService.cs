@@ -54,6 +54,17 @@ public sealed class ReservasDataService : IReservasDataService
         return await query.OrderByDescending(x => x.rev_fecha_reserva_utc).Select(x => MapReserva(x)).ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<ReservaDataModel>> ListarPorCanalAsync(string origenCanal, string? estado, CancellationToken ct = default)
+    {
+        var normalized = origenCanal.Trim().ToUpperInvariant();
+        var query = _db.Reservas.Include(x => x.Cliente).Include(x => x.Detalles).AsNoTracking()
+            .Where(x => x.rev_origen_canal != null &&
+                        x.rev_origen_canal.ToUpper() == normalized);
+
+        if (!string.IsNullOrWhiteSpace(estado)) query = query.Where(x => x.rev_estado == estado);
+        return await query.OrderByDescending(x => x.rev_fecha_reserva_utc).Select(x => MapReserva(x)).ToListAsync(ct);
+    }
+
     public async Task<ReservaDataModel?> ObtenerAsync(Guid reservaGuid, CancellationToken ct = default)
     {
         var reserva = await _db.Reservas.Include(x => x.Cliente).Include(x => x.Detalles).AsNoTracking().FirstOrDefaultAsync(x => x.rev_guid == reservaGuid, ct);

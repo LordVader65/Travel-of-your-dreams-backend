@@ -19,6 +19,9 @@ public sealed class ReservasService : IReservasService
     public async Task<IReadOnlyList<ReservaResponse>> ListarAsync(Guid? clienteGuid, string? estado, CancellationToken ct = default) =>
         (await _data.ListarAsync(clienteGuid, estado, ct)).Select(Map).ToList();
 
+    public async Task<IReadOnlyList<ReservaResponse>> ListarPorCanalAsync(string origenCanal, string? estado, CancellationToken ct = default) =>
+        (await _data.ListarPorCanalAsync(origenCanal, estado, ct)).Select(Map).ToList();
+
     public async Task<ReservaResponse?> ObtenerAsync(Guid reservaGuid, CancellationToken ct = default)
     {
         var reserva = await _data.ObtenerAsync(reservaGuid, ct);
