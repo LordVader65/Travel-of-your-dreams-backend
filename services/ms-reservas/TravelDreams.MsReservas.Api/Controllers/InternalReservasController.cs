@@ -38,6 +38,7 @@ public sealed class InternalReservasController : ControllerBase
             data = new
             {
                 reservaGuid = reserva.Guid,
+                revCodigo = reserva.Codigo,
                 clienteGuid = reserva.ClienteGuid,
                 estado = reserva.Estado,
                 fechaExpiracionUtc = reserva.FechaExpiracionUtc,

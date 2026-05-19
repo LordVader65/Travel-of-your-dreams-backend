@@ -32,6 +32,32 @@ public sealed class AtraccionesGrpcClient : IAtraccionesIntegrationClient
         }).ToList();
     }
 
+    public async Task<AtraccionReservationContextDto> GetReservationContextAsync(Guid atraccionGuid, Guid horarioGuid, CancellationToken ct = default)
+    {
+        var response = await _client.GetReservationContextAsync(new ReservationContextRequest
+        {
+            AtraccionGuid = atraccionGuid.ToString(),
+            HorarioGuid = horarioGuid.ToString()
+        }, cancellationToken: ct);
+
+        if (!response.Found)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Atraccion u horario no encontrado."));
+        }
+
+        return new AtraccionReservationContextDto
+        {
+            AtraccionGuid = Guid.Parse(response.AtraccionGuid),
+            HorarioGuid = Guid.Parse(response.HorarioGuid),
+            AtraccionNombre = response.AtraccionNombre,
+            HorFecha = DateOnly.Parse(response.HorFecha, System.Globalization.CultureInfo.InvariantCulture),
+            HorHoraInicio = TimeOnly.Parse(response.HorHoraInicio, System.Globalization.CultureInfo.InvariantCulture),
+            HorHoraFin = string.IsNullOrWhiteSpace(response.HorHoraFin)
+                ? null
+                : TimeOnly.Parse(response.HorHoraFin, System.Globalization.CultureInfo.InvariantCulture)
+        };
+    }
+
     public async Task ReserveAsync(Guid horarioGuid, IReadOnlyList<CrearReservaLineaRequest> lineas, CancellationToken ct = default)
     {
         var request = new TravelDreams.Grpc.Atracciones.ReserveAvailabilityRequest

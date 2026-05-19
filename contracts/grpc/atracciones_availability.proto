@@ -6,6 +6,7 @@ package traveldreams.atracciones;
 
 service AtraccionesAvailability {
   rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
+  rpc GetReservationContext (ReservationContextRequest) returns (ReservationContextResponse);
   rpc ReserveAvailability (ReserveAvailabilityRequest) returns (AvailabilityResult);
   rpc ReleaseAvailability (ReleaseAvailabilityRequest) returns (AvailabilityResult);
 }
@@ -16,6 +17,21 @@ message GetTicketsRequest {
 
 message GetTicketsResponse {
   repeated TicketItem tickets = 1;
+}
+
+message ReservationContextRequest {
+  string atraccion_guid = 1;
+  string horario_guid = 2;
+}
+
+message ReservationContextResponse {
+  bool found = 1;
+  string atraccion_guid = 2;
+  string horario_guid = 3;
+  string atraccion_nombre = 4;
+  string hor_fecha = 5;
+  string hor_hora_inicio = 6;
+  string hor_hora_fin = 7;
 }
 
 message TicketItem {

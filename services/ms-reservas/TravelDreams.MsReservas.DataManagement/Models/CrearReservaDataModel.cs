@@ -5,6 +5,10 @@ public sealed class CrearReservaDataModel
     public Guid ClienteGuid { get; set; }
     public Guid AtraccionGuid { get; set; }
     public Guid HorarioGuid { get; set; }
+    public string? AtraccionNombre { get; set; }
+    public DateOnly? HorFecha { get; set; }
+    public TimeOnly? HorHoraInicio { get; set; }
+    public TimeOnly? HorHoraFin { get; set; }
     public IReadOnlyList<CrearReservaLineaDataModel> Lineas { get; set; } = [];
     public string? OrigenCanal { get; set; }
     public int ExpiracionMinutos { get; set; } = 15;

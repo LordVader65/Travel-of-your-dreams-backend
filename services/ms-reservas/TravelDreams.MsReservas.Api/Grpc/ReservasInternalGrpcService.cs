@@ -33,6 +33,7 @@ public sealed class ReservasInternalGrpcService : ReservasInternal.ReservasInter
         {
             Found = true,
             ReservaGuid = reserva.Guid.ToString(),
+            RevCodigo = reserva.Codigo,
             ClienteGuid = reserva.ClienteGuid.ToString(),
             Estado = reserva.Estado,
             FechaExpiracionUtc = reserva.FechaExpiracionUtc.ToString("O"),

@@ -7,6 +7,10 @@ public sealed class ReservaDataModel
     public Guid ClienteGuid { get; set; }
     public Guid AtraccionGuid { get; set; }
     public Guid HorarioGuid { get; set; }
+    public string? AtraccionNombre { get; set; }
+    public DateOnly? HorFecha { get; set; }
+    public TimeOnly? HorHoraInicio { get; set; }
+    public TimeOnly? HorHoraFin { get; set; }
     public DateTime FechaReservaUtc { get; set; }
     public DateTime FechaExpiracionUtc { get; set; }
     public decimal Subtotal { get; set; }

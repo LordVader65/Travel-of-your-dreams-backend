@@ -28,7 +28,7 @@ public static class GatewayRoutes
             Methods = ["GET"],
             Prefixes = ["/api/v2/reservas"],
             RequiresAuthentication = true,
-            AllowedRoles = ["CLIENTE", "ADMIN"]
+            AllowedRoles = ["CLIENTE", "ADMIN", "BOOKING_INTEGRATION"]
         },
         new()
         {

@@ -54,6 +54,17 @@ public sealed class ReservasDataService : IReservasDataService
         return await query.OrderByDescending(x => x.rev_fecha_reserva_utc).Select(x => MapReserva(x)).ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<ReservaDataModel>> ListarPorCanalAsync(string origenCanal, string? estado, CancellationToken ct = default)
+    {
+        var normalized = origenCanal.Trim().ToUpperInvariant();
+        var query = _db.Reservas.Include(x => x.Cliente).Include(x => x.Detalles).AsNoTracking()
+            .Where(x => x.rev_origen_canal != null &&
+                        x.rev_origen_canal.ToUpper() == normalized);
+
+        if (!string.IsNullOrWhiteSpace(estado)) query = query.Where(x => x.rev_estado == estado);
+        return await query.OrderByDescending(x => x.rev_fecha_reserva_utc).Select(x => MapReserva(x)).ToListAsync(ct);
+    }
+
     public async Task<ReservaDataModel?> ObtenerAsync(Guid reservaGuid, CancellationToken ct = default)
     {
         var reserva = await _db.Reservas.Include(x => x.Cliente).Include(x => x.Detalles).AsNoTracking().FirstOrDefaultAsync(x => x.rev_guid == reservaGuid, ct);
@@ -78,6 +89,10 @@ public sealed class ReservasDataService : IReservasDataService
             cli_id = cliente.cli_id,
             at_guid = model.AtraccionGuid,
             hor_guid = model.HorarioGuid,
+            rev_atraccion_nombre = model.AtraccionNombre,
+            rev_hor_fecha = model.HorFecha,
+            rev_hor_hora_inicio = model.HorHoraInicio,
+            rev_hor_hora_fin = model.HorHoraFin,
             rev_fecha_reserva_utc = DateTime.UtcNow,
             rev_fecha_expiracion_utc = DateTime.UtcNow.AddMinutes(model.ExpiracionMinutos),
             rev_subtotal = subtotal,
@@ -166,6 +181,10 @@ public sealed class ReservasDataService : IReservasDataService
         ClienteGuid = x.Cliente?.cli_guid ?? Guid.Empty,
         AtraccionGuid = x.at_guid,
         HorarioGuid = x.hor_guid,
+        AtraccionNombre = x.rev_atraccion_nombre,
+        HorFecha = x.rev_hor_fecha,
+        HorHoraInicio = x.rev_hor_hora_inicio,
+        HorHoraFin = x.rev_hor_hora_fin,
         FechaReservaUtc = x.rev_fecha_reserva_utc,
         FechaExpiracionUtc = x.rev_fecha_expiracion_utc,
         Subtotal = x.rev_subtotal,

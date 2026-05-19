@@ -8,6 +8,10 @@ public sealed class ReservaEntity
     public int cli_id { get; set; }
     public Guid at_guid { get; set; }
     public Guid hor_guid { get; set; }
+    public string? rev_atraccion_nombre { get; set; }
+    public DateOnly? rev_hor_fecha { get; set; }
+    public TimeOnly? rev_hor_hora_inicio { get; set; }
+    public TimeOnly? rev_hor_hora_fin { get; set; }
     public DateTime rev_fecha_reserva_utc { get; set; }
     public DateTime rev_fecha_expiracion_utc { get; set; }
     public decimal rev_subtotal { get; set; }

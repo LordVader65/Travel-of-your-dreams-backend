@@ -10,10 +10,12 @@ namespace TravelDreams.MsFacturacion.Api.Controllers;
 public sealed class PagosV2Controller : ControllerBase
 {
     private readonly IPagoService _pagos;
+    private readonly IReservasIntegrationClient _reservas;
 
-    public PagosV2Controller(IPagoService pagos)
+    public PagosV2Controller(IPagoService pagos, IReservasIntegrationClient reservas)
     {
         _pagos = pagos;
+        _reservas = reservas;
     }
 
     [HttpPost("confirmacion")]
@@ -29,6 +31,7 @@ public sealed class PagosV2Controller : ControllerBase
             return BadRequest(Error(400, "Body invalido", "correo_receptor es obligatorio y debe ser valido."));
         }
 
+        var snapshot = await _reservas.GetPaymentSnapshotAsync(guid, ct);
         var factura = await _pagos.ConfirmarPagoConReceptorAsync(guid, new ConfirmarPagoReceptorRequest
         {
             NombreReceptor = request.NombreReceptor,
@@ -47,7 +50,7 @@ public sealed class PagosV2Controller : ControllerBase
             {
                 fac_guid = factura.Guid,
                 fac_numero = factura.Numero,
-                rev_codigo = factura.ReservaGuid.ToString(),
+                rev_codigo = snapshot?.Codigo ?? factura.ReservaGuid.ToString(),
                 total = factura.Total,
                 moneda = factura.Moneda,
                 fecha_emision = factura.FechaEmisionUtc,

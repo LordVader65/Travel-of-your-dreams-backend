@@ -28,6 +28,7 @@ message PaymentSnapshotResponse {
   string valor_iva = 7;
   string total = 8;
   string moneda = 9;
+  string rev_codigo = 10;
 }
 
 message ClienteLookupResponse {

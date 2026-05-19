@@ -26,6 +26,7 @@ public sealed class ReservasGrpcClient : IReservasIntegrationClient
         return new ReservaPagoSnapshot
         {
             ReservaGuid = Guid.Parse(response.ReservaGuid),
+            Codigo = response.RevCodigo,
             ClienteGuid = Guid.Parse(response.ClienteGuid),
             Estado = response.Estado,
             FechaExpiracionUtc = DateTime.Parse(response.FechaExpiracionUtc, null, System.Globalization.DateTimeStyles.RoundtripKind),

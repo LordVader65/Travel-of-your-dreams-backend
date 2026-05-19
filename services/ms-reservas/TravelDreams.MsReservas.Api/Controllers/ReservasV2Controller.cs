@@ -26,23 +26,32 @@ public sealed class ReservasV2Controller : ControllerBase
         if (request.Lineas.Count == 0) return BadRequest(Error(400, "Body invalido", "Debe enviar al menos una linea."));
         if (request.Lineas.Any(x => x.TckGuid == Guid.Empty || x.Cantidad < 1)) return BadRequest(Error(400, "Body invalido", "Cada linea debe tener tck_guid y cantidad mayor o igual a 1."));
 
+        var isBookingIntegration = IsBookingIntegration();
+        if (isBookingIntegration && request.ClienteInvitado is null)
+        {
+            return BadRequest(Error(400, "Body invalido", "cliente_invitado es obligatorio para reservas creadas por Booking."));
+        }
+
         Guid? clienteGuid = null;
-        if (request.ClienteInvitado is null)
+        ClienteInvitadoV2Request? clienteInvitado = request.ClienteInvitado;
+        if (!isBookingIntegration && TryGetUserGuid(out _))
         {
             clienteGuid = await ResolveClienteGuidFromHeadersAsync(ct);
-            if (!clienteGuid.HasValue)
-            {
-                return BadRequest(Error(400, "Body invalido", "cliente_invitado es obligatorio cuando no se envia JWT de cliente."));
-            }
+            clienteInvitado = null;
+        }
+
+        if (!clienteGuid.HasValue && clienteInvitado is null)
+        {
+            return BadRequest(Error(400, "Body invalido", "cliente_invitado es obligatorio cuando no se envia JWT de cliente."));
         }
 
         var model = new CrearReservaRequest
         {
             ClienteGuid = clienteGuid,
-            ClienteInvitado = request.ClienteInvitado?.ToClienteRequest(),
+            ClienteInvitado = clienteInvitado?.ToClienteRequest(),
             AtraccionGuid = request.AtGuid,
             HorarioGuid = request.HorGuid,
-            OrigenCanal = request.OrigenCanal ?? "BOOKING",
+            OrigenCanal = isBookingIntegration ? "BOOKING" : request.OrigenCanal ?? "BOOKING",
             PorcentajeIva = 12,
             ExpiracionMinutos = 30,
             Lineas = request.Lineas.Select(x => new CrearReservaLineaRequest
@@ -60,15 +69,24 @@ public sealed class ReservasV2Controller : ControllerBase
     public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int limit = 10, CancellationToken ct = default)
     {
         if (page < 1) return BadRequest(Error(400, "Parametro invalido", "El campo 'page' debe ser mayor o igual a 1."));
-        if (limit < 1) return BadRequest(Error(400, "Parametro invalido", "El campo 'limit' debe ser mayor o igual a 1."));
+        if (limit < 1 || limit > 50) return BadRequest(Error(400, "Parametro invalido", "El campo 'limit' debe estar entre 1 y 50."));
 
-        var clienteGuid = await ResolveClienteGuidFromHeadersAsync(ct);
-        if (!IsAdmin() && !clienteGuid.HasValue)
+        IReadOnlyList<ReservaResponse> reservas;
+        if (IsBookingIntegration())
         {
-            return Unauthorized(Error(401, "Token ausente o invalido", "No se pudo resolver el cliente autenticado."));
+            reservas = await _reservas.ListarPorCanalAsync("BOOKING", null, ct);
+        }
+        else
+        {
+            var clienteGuid = await ResolveClienteGuidFromHeadersAsync(ct);
+            if (!IsAdmin() && !clienteGuid.HasValue)
+            {
+                return Unauthorized(Error(401, "Token ausente o invalido", "No se pudo resolver el cliente autenticado."));
+            }
+
+            reservas = await _reservas.ListarAsync(IsAdmin() ? null : clienteGuid, null, ct);
         }
 
-        var reservas = await _reservas.ListarAsync(IsAdmin() ? null : clienteGuid, null, ct);
         var total = reservas.Count;
         var data = reservas
             .OrderByDescending(x => x.FechaReservaUtc)
@@ -97,6 +115,7 @@ public sealed class ReservasV2Controller : ControllerBase
     {
         var data = await _reservas.ObtenerAsync(guid, ct);
         if (data is null) return NotFound(new { status = 404, error = "Reserva no encontrada." });
+
         if (!await CanAccessReservaAsync(data, ct)) return StatusCode(403, new { status = 403, error = "La reserva no pertenece al cliente autenticado." });
 
         return Ok(new { status = 200, message = "Operacion exitosa", data = ToV2Detail(data) });
@@ -106,9 +125,9 @@ public sealed class ReservasV2Controller : ControllerBase
     {
         rev_guid = reserva.Guid,
         rev_codigo = reserva.Codigo,
-        hor_fecha = (DateOnly?)null,
-        hor_hora_inicio = (string?)null,
-        atraccion_nombre = (string?)null,
+        hor_fecha = reserva.HorFecha,
+        hor_hora_inicio = FormatTime(reserva.HorHoraInicio),
+        atraccion_nombre = reserva.AtraccionNombre,
         rev_total = reserva.Total,
         moneda = reserva.Moneda,
         rev_estado = reserva.Estado,
@@ -119,10 +138,10 @@ public sealed class ReservasV2Controller : ControllerBase
     {
         rev_guid = reserva.Guid,
         rev_codigo = reserva.Codigo,
-        hor_fecha = (DateOnly?)null,
-        hor_hora_inicio = (string?)null,
-        hor_hora_fin = (string?)null,
-        atraccion_nombre = (string?)null,
+        hor_fecha = reserva.HorFecha,
+        hor_hora_inicio = FormatTime(reserva.HorHoraInicio),
+        hor_hora_fin = FormatTime(reserva.HorHoraFin),
+        atraccion_nombre = reserva.AtraccionNombre,
         rev_subtotal = reserva.Subtotal,
         rev_valor_iva = reserva.ValorIva,
         rev_total = reserva.Total,
@@ -153,6 +172,11 @@ public sealed class ReservasV2Controller : ControllerBase
     private async Task<bool> CanAccessReservaAsync(ReservaResponse reserva, CancellationToken ct)
     {
         if (IsAdmin()) return true;
+        if (IsBookingIntegration())
+        {
+            return string.Equals(reserva.OrigenCanal, "BOOKING", StringComparison.OrdinalIgnoreCase);
+        }
+
         var clienteGuid = await ResolveClienteGuidFromHeadersAsync(ct);
         return clienteGuid.HasValue && clienteGuid.Value == reserva.ClienteGuid;
     }
@@ -169,6 +193,11 @@ public sealed class ReservasV2Controller : ControllerBase
         && roles.ToString().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Any(x => x.Equals("ADMIN", StringComparison.OrdinalIgnoreCase));
 
+    private bool IsBookingIntegration() =>
+        Request.Headers.TryGetValue("X-Roles", out var roles)
+        && roles.ToString().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Any(x => x.Equals("BOOKING_INTEGRATION", StringComparison.OrdinalIgnoreCase));
+
     private object Error(int status, string error, string detail) => new
     {
         status,
@@ -177,6 +206,8 @@ public sealed class ReservasV2Controller : ControllerBase
         timestamp = DateTime.UtcNow,
         path = Request.Path.Value
     };
+
+    private static string? FormatTime(TimeOnly? time) => time?.ToString("HH:mm");
 }
 
 public sealed class CrearReservaV2Request
