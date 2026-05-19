@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsIdentidad.Api.Configuration;
+using TravelDreams.MsIdentidad.Api.Middleware;
 using TravelDreams.MsIdentidad.Business;
 using TravelDreams.MsIdentidad.DataAccess.Context;
 using TravelDreams.MsIdentidad.DataManagement;
@@ -29,6 +30,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.MapHealthChecks("/health");
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsAtracciones.Api.Configuration;
 using TravelDreams.MsAtracciones.Api.Grpc;
+using TravelDreams.MsAtracciones.Api.Middleware;
 using TravelDreams.MsAtracciones.Business;
 using TravelDreams.MsAtracciones.DataAccess.Context;
 using TravelDreams.MsAtracciones.DataManagement;
@@ -31,8 +32,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseGrpcWeb();
+app.UseMiddleware<ApiExceptionMiddleware>();
+
 app.MapHealthChecks("/health");
-app.MapGrpcService<AtraccionesAvailabilityGrpcService>();
+app.MapGrpcService<AtraccionesAvailabilityGrpcService>().EnableGrpcWeb();
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new
 {

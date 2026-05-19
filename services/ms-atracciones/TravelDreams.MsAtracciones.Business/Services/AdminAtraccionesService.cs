@@ -74,8 +74,29 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
 
     public async Task<object> CrearReseniaAsync(CrearReseniaRequest request, CancellationToken ct = default)
     {
-        if (request.Rating is < 1 or > 5) throw new InvalidOperationException("La calificacion debe estar entre 1 y 5.");
-        return await _data.CrearReseniaAsync(new CrearReseniaDataModel { AtraccionGuid = request.AtraccionGuid, ReservaGuid = request.ReservaGuid, Comentario = request.Comentario, Rating = request.Rating, Usuario = "cliente" }, ct);
+        var rating = request.Calificacion.HasValue
+            ? (short)request.Calificacion.Value
+            : request.Rating;
+
+        if (rating is < 1 or > 5) throw new InvalidOperationException("La calificacion debe estar entre 1 y 5.");
+
+        var reservaGuid = request.ReservaGuid == Guid.Empty
+            ? Guid.NewGuid()
+            : request.ReservaGuid;
+
+        var usuario = request.ClienteId.HasValue
+            ? $"booking:{request.ClienteId.Value}"
+            : "cliente";
+
+        return await _data.CrearReseniaAsync(new CrearReseniaDataModel
+        {
+            ClienteId = request.ClienteId,
+            AtraccionGuid = request.AtraccionGuid,
+            ReservaGuid = reservaGuid,
+            Comentario = request.Comentario,
+            Rating = rating,
+            Usuario = usuario
+        }, ct);
     }
 
     public Task<bool> CambiarEstadoReseniaAsync(Guid guid, string estado, CancellationToken ct = default) =>

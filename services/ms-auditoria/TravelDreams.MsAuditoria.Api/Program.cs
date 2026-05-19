@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsAuditoria.Api.Configuration;
+using TravelDreams.MsAuditoria.Api.Middleware;
 using TravelDreams.MsAuditoria.Business;
 using TravelDreams.MsAuditoria.DataAccess.Context;
 using TravelDreams.MsAuditoria.DataManagement;
@@ -29,6 +30,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.MapHealthChecks("/health");
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new

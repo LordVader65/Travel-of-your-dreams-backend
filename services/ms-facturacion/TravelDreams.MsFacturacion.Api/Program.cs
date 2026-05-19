@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsFacturacion.Api.Configuration;
+using TravelDreams.MsFacturacion.Api.Middleware;
 using TravelDreams.MsFacturacion.Business;
 using TravelDreams.MsFacturacion.DataAccess.Context;
 using TravelDreams.MsFacturacion.DataManagement;
@@ -29,6 +30,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.MapHealthChecks("/health");
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new

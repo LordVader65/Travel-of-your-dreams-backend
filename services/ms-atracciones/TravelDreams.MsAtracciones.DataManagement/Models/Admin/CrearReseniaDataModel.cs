@@ -2,6 +2,7 @@ namespace TravelDreams.MsAtracciones.DataManagement.Models.Admin;
 
 public sealed class CrearReseniaDataModel
 {
+    public int? ClienteId { get; set; }
     public Guid AtraccionGuid { get; set; }
     public Guid ReservaGuid { get; set; }
     public string? Comentario { get; set; }
