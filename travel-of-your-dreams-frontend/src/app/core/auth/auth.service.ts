@@ -16,7 +16,8 @@ export class AuthService {
   ) {}
 
   get token() {
-    return this.session()?.token ?? null;
+    const session = this.session() as (LoginResponse & { accessToken?: string }) | null;
+    return session?.token ?? session?.accessToken ?? null;
   }
 
   get isAuthenticated() {
@@ -44,8 +45,9 @@ export class AuthService {
   }
 
   private storeSession(session: LoginResponse) {
-    localStorage.setItem(sessionKey, JSON.stringify(session));
-    this.session.set(session);
+    const normalized = this.normalizeSession(session);
+    localStorage.setItem(sessionKey, JSON.stringify(normalized));
+    this.session.set(normalized);
   }
 
   private readSession(): LoginResponse | null {
@@ -57,5 +59,20 @@ export class AuthService {
       localStorage.removeItem(sessionKey);
       return null;
     }
+  }
+
+  private normalizeSession(session: LoginResponse): LoginResponse {
+    const value = session as LoginResponse & {
+      usuarioGuid?: string;
+      clienteGuid?: string | null;
+      expiraEnUtc?: string;
+    };
+
+    return {
+      ...session,
+      usuario_guid: session.usuario_guid ?? value.usuarioGuid ?? '',
+      cliente_guid: session.cliente_guid ?? value.clienteGuid ?? null,
+      expira_en_utc: session.expira_en_utc ?? value.expiraEnUtc ?? ''
+    };
   }
 }

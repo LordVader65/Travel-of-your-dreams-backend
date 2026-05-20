@@ -1,10 +1,11 @@
 export interface CrearReservaRequest {
-  hor_guid: string;
+  atraccionGuid: string;
+  horarioGuid: string;
   fecha?: string;
-  lineas: Array<{ tck_guid: string; cantidad: number }>;
-  origen_canal?: string | null;
-  expiracion_minutos: number;
-  porcentaje_iva: number;
+  lineas: Array<{ ticketGuid: string; cantidad: number }>;
+  origenCanal?: string | null;
+  expiracionMinutos: number;
+  porcentajeIva: number;
 }
 
 export interface Reserva {

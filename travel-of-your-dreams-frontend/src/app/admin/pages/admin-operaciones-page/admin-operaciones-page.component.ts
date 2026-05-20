@@ -104,7 +104,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
               <span><strong>{{ item.titulo }}</strong><small>{{ item.precio }} {{ item.moneda }} · {{ item.estado }}</small></span>
               <span class="actions">
                 <button class="btn secondary" type="button" (click)="editarTicket(item)">Editar</button>
-                <button class="btn danger" type="button" (click)="eliminarTicket(item.id)">Eliminar</button>
+                <button class="btn danger" type="button" (click)="eliminarTicket(item.guid)">Eliminar</button>
               </span>
             </div>
           } @empty {
@@ -121,8 +121,8 @@ import { NotificationService } from '../../../core/notifications/notification.se
             <div class="compact-row">
               <span><strong>{{ item.rating || item.calificacion || '-' }}/5</strong><small>{{ item.comentario || item.estado }}</small></span>
               <span class="actions">
-                <button class="btn" type="button" (click)="estadoResenia(item.id, 'A')">Mostrar</button>
-                <button class="btn danger" type="button" (click)="estadoResenia(item.id, 'I')">Ocultar</button>
+                <button class="btn" type="button" (click)="estadoResenia(item.guid, 'A')">Mostrar</button>
+                <button class="btn danger" type="button" (click)="estadoResenia(item.guid, 'I')">Ocultar</button>
               </span>
             </div>
           } @empty {
@@ -294,9 +294,9 @@ export class AdminOperacionesPageComponent implements OnInit {
     };
   }
 
-  eliminarTicket(id: number) {
+  eliminarTicket(guid: string) {
     if (!confirm('Eliminar este ticket?')) return;
-    this.api.eliminarTicket(id).subscribe({
+    this.api.eliminarTicket(guid).subscribe({
       next: () => {
         this.mensaje.set('Ticket eliminado.');
         this.notifications.success('Ticket eliminado.');
@@ -311,8 +311,8 @@ export class AdminOperacionesPageComponent implements OnInit {
     this.ticket = this.nuevoTicket();
   }
 
-  estadoResenia(id: number, estado: string) {
-    this.api.cambiarEstadoResenia(id, estado).subscribe({
+  estadoResenia(guid: string, estado: string) {
+    this.api.cambiarEstadoResenia(guid, estado).subscribe({
       next: () => {
         this.mensaje.set('Resenia moderada.');
         this.notifications.success('Resenia moderada.');

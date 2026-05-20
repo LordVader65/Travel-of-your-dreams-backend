@@ -238,12 +238,12 @@ export class AdminSeguridadPageComponent implements OnInit {
       return;
     }
 
-    if (!this.gestion.usuarioId || this.gestion.rolIds.length === 0) {
+    if (!this.gestion.guid || this.gestion.rolIds.length === 0) {
       this.notifications.error('Selecciona un usuario y al menos un rol.');
       return;
     }
 
-    this.api.cambiarRolesUsuario(this.gestion.usuarioId, this.gestion.rolIds).subscribe({
+    this.api.cambiarRolesUsuario(this.gestion.guid, this.gestion.rolIds).subscribe({
       next: () => {
         this.mensaje.set('Roles actualizados.');
         this.notifications.success('Roles actualizados.');
