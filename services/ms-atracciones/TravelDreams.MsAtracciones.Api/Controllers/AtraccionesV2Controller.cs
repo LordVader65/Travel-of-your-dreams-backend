@@ -259,7 +259,13 @@ public sealed class AtraccionesV2Controller : ControllerBase
                 listItem.idiomas_disponibles,
                 listItem.disponibilidad,
                 descripcion = atraccion.at_descripcion,
-                imagenes = atraccion.ImagenAtracciones.Where(x => x.ima_estado == "A" && x.Imagen != null && x.Imagen.img_estado == "A").OrderBy(x => x.ima_orden).Select(x => x.Imagen!.img_url).ToList(),
+                imagenes = atraccion.ImagenAtracciones
+                    .Where(x => x.ima_estado == "A" && x.Imagen != null && x.Imagen.img_estado == "A")
+                    .OrderByDescending(x => x.ima_es_principal)
+                    .ThenBy(x => x.ima_orden)
+                    .Select(x => NormalizeImageUrl(x.Imagen!.img_url))
+                    .Where(x => x != null)
+                    .ToList(),
                 incluye = atraccion.AtraccionIncluyes.Where(x => x.ai_estado == "A" && x.Incluye != null && x.Incluye.inc_estado == "A" && x.Incluye.inc_tipo == "INCLUYE").Select(x => x.Incluye!.inc_descripcion).ToList(),
                 no_incluye = atraccion.AtraccionIncluyes.Where(x => x.ai_estado == "A" && x.Incluye != null && x.Incluye.inc_estado == "A" && x.Incluye.inc_tipo != "INCLUYE").Select(x => x.Incluye!.inc_descripcion).ToList(),
                 punto_encuentro = atraccion.at_punto_encuentro,
@@ -430,7 +436,12 @@ public sealed class AtraccionesV2Controller : ControllerBase
         var tipo = categorias.FirstOrDefault(x => x.cat_parent_id is null) ?? categorias.FirstOrDefault();
         var subtipo = categorias.FirstOrDefault(x => tipo is not null && x.cat_parent_id == tipo.cat_id);
         var horariosDisponibles = atraccion.Horarios.Where(IsHorarioDisponible).OrderBy(x => x.hor_fecha).ThenBy(x => x.hor_hora_inicio).ToList();
-        var imagenPrincipal = atraccion.ImagenAtracciones.Where(x => x.ima_estado == "A" && x.Imagen != null && x.Imagen.img_estado == "A").OrderByDescending(x => x.ima_es_principal).ThenBy(x => x.ima_orden).Select(x => x.Imagen!.img_url).FirstOrDefault();
+        var imagenPrincipal = atraccion.ImagenAtracciones
+            .Where(x => x.ima_estado == "A" && x.Imagen != null && x.Imagen.img_estado == "A")
+            .OrderByDescending(x => x.ima_es_principal)
+            .ThenBy(x => x.ima_orden)
+            .Select(x => NormalizeImageUrl(x.Imagen!.img_url))
+            .FirstOrDefault(x => x != null);
         var etiquetas = new List<string>();
         if (atraccion.at_free_cancellation) etiquetas.Add("free_cancellation");
         if (atraccion.at_skip_the_line) etiquetas.Add("skip_the_line");
@@ -496,6 +507,8 @@ public sealed class AtraccionesV2Controller : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
         if (value.Contains("example.com", StringComparison.OrdinalIgnoreCase)) return null;
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) return null;
+        if (uri.Scheme is not ("http" or "https")) return null;
         return value;
     }
 
