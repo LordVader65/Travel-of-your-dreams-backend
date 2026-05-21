@@ -4,6 +4,7 @@ public sealed class AtraccionUpsertDataModel
 {
     public Guid? Guid { get; set; }
     public int DestinoId { get; set; }
+    public string? NumeroEstablecimiento { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
     public string? Direccion { get; set; }

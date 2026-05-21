@@ -51,8 +51,12 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
 
     public async Task<object> ListarAtraccionesAsync(CancellationToken ct = default) => await _data.ListarAtraccionesAsync(ct);
     public async Task<object?> ObtenerAtraccionAsync(Guid guid, CancellationToken ct = default) => await _data.ObtenerAtraccionAsync(guid, ct);
-    public async Task<object> GuardarAtraccionAsync(Guid? guid, AdminAtraccionRequest request, CancellationToken ct = default) =>
-        await _data.GuardarAtraccionAsync(new AtraccionUpsertDataModel { Guid = guid, DestinoId = request.DestinoId, Nombre = request.Nombre, Descripcion = request.Descripcion, Direccion = request.Direccion, DuracionMinutos = request.DuracionMinutos, PuntoEncuentro = request.PuntoEncuentro, PrecioReferencia = request.PrecioReferencia, IncluyeAcompaniante = request.IncluyeAcompaniante, IncluyeTransporte = request.IncluyeTransporte, Disponible = request.Disponible, FreeCancellation = request.FreeCancellation, SkipTheLine = request.SkipTheLine, Usuario = "admin" }, ct);
+    public async Task<object> GuardarAtraccionAsync(Guid? guid, AdminAtraccionRequest request, CancellationToken ct = default)
+    {
+        ValidateAtraccion(request);
+
+        return await _data.GuardarAtraccionAsync(new AtraccionUpsertDataModel { Guid = guid, DestinoId = request.DestinoId, NumeroEstablecimiento = request.NumeroEstablecimiento, Nombre = request.Nombre.Trim(), Descripcion = request.Descripcion, Direccion = request.Direccion, DuracionMinutos = request.DuracionMinutos, PuntoEncuentro = request.PuntoEncuentro, PrecioReferencia = request.PrecioReferencia, IncluyeAcompaniante = request.IncluyeAcompaniante, IncluyeTransporte = request.IncluyeTransporte, Disponible = request.Disponible, FreeCancellation = request.FreeCancellation, SkipTheLine = request.SkipTheLine, Usuario = "admin" }, ct);
+    }
 
     public Task<bool> DesactivarAtraccionAsync(Guid guid, CancellationToken ct = default) => _data.DesactivarAtraccionAsync(guid, "admin", ct);
 
@@ -124,6 +128,14 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
         _data.CambiarEstadoReseniaAsync(guid, estado, "admin", ct);
 
     private static async Task<object> Wrap<T>(Task<T> task) where T : notnull => await task;
+
+    private static void ValidateAtraccion(AdminAtraccionRequest request)
+    {
+        if (request.DestinoId <= 0) throw new InvalidOperationException("Destino es obligatorio.");
+        if (string.IsNullOrWhiteSpace(request.Nombre)) throw new InvalidOperationException("Nombre de atraccion es obligatorio.");
+        if (request.DuracionMinutos.HasValue && request.DuracionMinutos <= 0) throw new InvalidOperationException("Duracion minutos debe ser mayor a cero.");
+        if (request.PrecioReferencia.HasValue && request.PrecioReferencia < 0) throw new InvalidOperationException("Precio referencia no puede ser negativo.");
+    }
 
     private static void ValidateHorario(AdminHorarioRequest request, bool isUpdate)
     {
