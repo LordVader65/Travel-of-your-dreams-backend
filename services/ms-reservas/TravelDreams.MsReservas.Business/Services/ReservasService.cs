@@ -16,14 +16,21 @@ public sealed class ReservasService : IReservasService
         _atracciones = atracciones;
     }
 
-    public async Task<IReadOnlyList<ReservaResponse>> ListarAsync(Guid? clienteGuid, string? estado, CancellationToken ct = default) =>
-        (await _data.ListarAsync(clienteGuid, estado, ct)).Select(Map).ToList();
+    public async Task<IReadOnlyList<ReservaResponse>> ListarAsync(Guid? clienteGuid, string? estado, CancellationToken ct = default)
+    {
+        await ExpirarPendientesAsync(ct);
+        return (await _data.ListarAsync(clienteGuid, estado, ct)).Select(Map).ToList();
+    }
 
-    public async Task<IReadOnlyList<ReservaResponse>> ListarPorCanalAsync(string origenCanal, string? estado, CancellationToken ct = default) =>
-        (await _data.ListarPorCanalAsync(origenCanal, estado, ct)).Select(Map).ToList();
+    public async Task<IReadOnlyList<ReservaResponse>> ListarPorCanalAsync(string origenCanal, string? estado, CancellationToken ct = default)
+    {
+        await ExpirarPendientesAsync(ct);
+        return (await _data.ListarPorCanalAsync(origenCanal, estado, ct)).Select(Map).ToList();
+    }
 
     public async Task<ReservaResponse?> ObtenerAsync(Guid reservaGuid, CancellationToken ct = default)
     {
+        await ExpirarPendientesAsync(ct);
         var reserva = await _data.ObtenerAsync(reservaGuid, ct);
         return reserva is null ? null : Map(reserva);
     }
