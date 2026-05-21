@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsAtracciones.DataAccess.Context;
@@ -82,7 +83,23 @@ public sealed class AtraccionesV2Controller : ControllerBase
             },
             sorters = Sorters,
             defaultSorter = DefaultSorter,
-            _links = new { self = $"/api/v2/atracciones?page={page}&limit={limit}" }
+            _links = new
+            {
+                self = BuildSelfLink("/api/v2/atracciones", new Dictionary<string, object?>
+                {
+                    ["ciudad"] = ciudad,
+                    ["tipo"] = tipo,
+                    ["subtipo"] = subtipo,
+                    ["etiqueta"] = etiqueta,
+                    ["idioma"] = idioma,
+                    ["calificacion_min"] = calificacionMin,
+                    ["horario"] = horario,
+                    ["disponible"] = disponible,
+                    ["ordenar_por"] = ordenarPor,
+                    ["page"] = page,
+                    ["limit"] = limit
+                })
+            }
         });
     }
 
@@ -98,7 +115,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
         var atraccionesList = await atracciones.ToListAsync(ct);
         var atraccionIds = atraccionesList.Select(x => x.at_id).ToHashSet();
 
-        var destinationFilters = await _db.Destinos.AsNoTracking()
+        var destinos = await _db.Destinos.AsNoTracking()
             .Where(x => x.des_estado == "A")
             .OrderBy(x => x.des_nombre)
             .Select(x => new
@@ -106,10 +123,20 @@ public sealed class AtraccionesV2Controller : ControllerBase
                 name = x.des_nombre,
                 tagname = Slug(x.des_nombre),
                 productCount = x.Atracciones.Count(a => atraccionIds.Contains(a.at_id)),
-                image = new { url = x.des_imagen_url },
-                childFilterOptions = (object?)null
+                imageUrl = x.des_imagen_url
             })
             .ToListAsync(ct);
+
+        var destinationFilters = destinos
+            .Select(x => new
+            {
+                x.name,
+                x.tagname,
+                x.productCount,
+                image = new { url = NormalizeImageUrl(x.imageUrl) },
+                childFilterOptions = (object?)null
+            })
+            .ToList();
 
         var categorias = await _db.Categorias.AsNoTracking()
             .Where(x => x.cat_estado == "A")
@@ -204,7 +231,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
             .OrderBy(x => x.hor_fecha)
             .ThenBy(x => x.hor_hora_inicio)
             .Take(5)
-            .Select(x => new { fecha = x.hor_fecha, hora_inicio = FormatTime(x.hor_hora_inicio), hora_fin = FormatTime(x.hor_hora_fin), cupos = x.hor_cupos_disponibles })
+            .Select(x => new { hor_guid = x.hor_guid, fecha = x.hor_fecha, hora_inicio = FormatTime(x.hor_hora_inicio), hora_fin = FormatTime(x.hor_hora_fin), cupos = x.hor_cupos_disponibles })
             .ToList();
 
         return Ok(new
@@ -320,8 +347,8 @@ public sealed class AtraccionesV2Controller : ControllerBase
             query = query.Where(x => x.Destino != null && x.Destino.des_nombre.ToLower().Contains(value));
         }
 
-        query = ApplyCategoryFilter(query, tipo);
-        query = ApplyCategoryFilter(query, subtipo);
+        query = ApplyTypeFilter(query, tipo);
+        query = ApplySubtypeFilter(query, subtipo);
 
         if (!string.IsNullOrWhiteSpace(etiqueta))
         {
@@ -353,16 +380,48 @@ public sealed class AtraccionesV2Controller : ControllerBase
         return query;
     }
 
-    private static IQueryable<AtraccionEntity> ApplyCategoryFilter(IQueryable<AtraccionEntity> query, string? filter)
+    private static IQueryable<AtraccionEntity> ApplyTypeFilter(IQueryable<AtraccionEntity> query, string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter)) return query;
 
         if (Guid.TryParse(filter, out var guid))
         {
-            return query.Where(x => x.CategoriaAtracciones.Any(c => c.ca_estado == "A" && c.Categoria != null && c.Categoria.cat_guid == guid));
+            return query.Where(x => x.CategoriaAtracciones.Any(c =>
+                c.ca_estado == "A"
+                && c.Categoria != null
+                && c.Categoria.cat_estado == "A"
+                && c.Categoria.cat_parent_id == null
+                && c.Categoria.cat_guid == guid));
         }
 
-        return query.Where(x => x.CategoriaAtracciones.Any(c => c.ca_estado == "A" && c.Categoria != null && c.Categoria.cat_tagname == filter));
+        return query.Where(x => x.CategoriaAtracciones.Any(c =>
+            c.ca_estado == "A"
+            && c.Categoria != null
+            && c.Categoria.cat_estado == "A"
+            && c.Categoria.cat_parent_id == null
+            && c.Categoria.cat_tagname == filter));
+    }
+
+    private static IQueryable<AtraccionEntity> ApplySubtypeFilter(IQueryable<AtraccionEntity> query, string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter)) return query;
+
+        if (Guid.TryParse(filter, out var guid))
+        {
+            return query.Where(x => x.CategoriaAtracciones.Any(c =>
+                c.ca_estado == "A"
+                && c.Categoria != null
+                && c.Categoria.cat_estado == "A"
+                && c.Categoria.cat_parent_id != null
+                && c.Categoria.cat_guid == guid));
+        }
+
+        return query.Where(x => x.CategoriaAtracciones.Any(c =>
+            c.ca_estado == "A"
+            && c.Categoria != null
+            && c.Categoria.cat_estado == "A"
+            && c.Categoria.cat_parent_id != null
+            && c.Categoria.cat_tagname == filter));
     }
 
     private static dynamic BuildListItem(AtraccionEntity atraccion)
@@ -372,8 +431,6 @@ public sealed class AtraccionesV2Controller : ControllerBase
         var subtipo = categorias.FirstOrDefault(x => tipo is not null && x.cat_parent_id == tipo.cat_id);
         var horariosDisponibles = atraccion.Horarios.Where(IsHorarioDisponible).OrderBy(x => x.hor_fecha).ThenBy(x => x.hor_hora_inicio).ToList();
         var imagenPrincipal = atraccion.ImagenAtracciones.Where(x => x.ima_estado == "A" && x.Imagen != null && x.Imagen.img_estado == "A").OrderByDescending(x => x.ima_es_principal).ThenBy(x => x.ima_orden).Select(x => x.Imagen!.img_url).FirstOrDefault();
-        var incluye = atraccion.AtraccionIncluyes.Where(x => x.ai_estado == "A" && x.Incluye != null && x.Incluye.inc_estado == "A" && x.Incluye.inc_tipo == "INCLUYE").Select(x => x.Incluye!.inc_descripcion).ToList();
-        var noIncluye = atraccion.AtraccionIncluyes.Where(x => x.ai_estado == "A" && x.Incluye != null && x.Incluye.inc_estado == "A" && x.Incluye.inc_tipo != "INCLUYE").Select(x => x.Incluye!.inc_descripcion).ToList();
         var etiquetas = new List<string>();
         if (atraccion.at_free_cancellation) etiquetas.Add("free_cancellation");
         if (atraccion.at_skip_the_line) etiquetas.Add("skip_the_line");
@@ -391,8 +448,6 @@ public sealed class AtraccionesV2Controller : ControllerBase
             etiquetas,
             descripcion_corta = ShortDescription(atraccion.at_descripcion),
             imagen_principal = imagenPrincipal,
-            incluye,
-            no_incluye = noIncluye,
             duracion_minutos = atraccion.at_duracion_minutos,
             precio_desde = atraccion.Tickets.Where(x => x.tck_estado == "A").Select(x => (decimal?)x.tck_precio).Min() ?? atraccion.at_precio_referencia ?? 0,
             moneda = atraccion.Tickets.FirstOrDefault(x => x.tck_estado == "A")?.tck_moneda ?? "USD",
@@ -436,6 +491,30 @@ public sealed class AtraccionesV2Controller : ControllerBase
     private static string Slug(string value) => value.Trim().ToLowerInvariant().Replace(' ', '-');
 
     private static string? FormatTime(TimeOnly? time) => time?.ToString("HH:mm");
+
+    private static string? NormalizeImageUrl(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (value.Contains("example.com", StringComparison.OrdinalIgnoreCase)) return null;
+        return value;
+    }
+
+    private static string BuildSelfLink(string path, IReadOnlyDictionary<string, object?> values)
+    {
+        var query = values
+            .Where(x => x.Value is not null && !string.IsNullOrWhiteSpace(Convert.ToString(x.Value, CultureInfo.InvariantCulture)))
+            .Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(ToQueryValue(x.Value!))}");
+
+        var queryString = string.Join("&", query);
+        return string.IsNullOrWhiteSpace(queryString) ? path : $"{path}?{queryString}";
+    }
+
+    private static string ToQueryValue(object value) => value switch
+    {
+        bool boolean => boolean.ToString().ToLowerInvariant(),
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+        _ => value.ToString() ?? string.Empty
+    };
 
     private static object Error(int status, string error, string detail) => new
     {

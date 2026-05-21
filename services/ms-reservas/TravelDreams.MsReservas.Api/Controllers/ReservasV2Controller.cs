@@ -74,7 +74,8 @@ public sealed class ReservasV2Controller : ControllerBase
                 limit,
                 total,
                 total_pages = (int)Math.Ceiling(total / (double)limit)
-            }
+            },
+            _links = new { self = $"/api/v2/reservas?page={page}&limit={limit}" }
         });
     }
 
@@ -114,7 +115,7 @@ public sealed class ReservasV2Controller : ControllerBase
         rev_total = reserva.Total,
         moneda = reserva.Moneda,
         rev_estado = reserva.Estado,
-        rev_fecha_reserva_utc = reserva.FechaReservaUtc,
+        rev_fecha_reserva_utc = TruncateToSeconds(reserva.FechaReservaUtc),
         detalle = reserva.Detalles.Select(x => new
         {
             tck_tipo_participante = x.TipoParticipante,
@@ -142,6 +143,9 @@ public sealed class ReservasV2Controller : ControllerBase
     };
 
     private static string? FormatTime(TimeOnly? time) => time?.ToString("HH:mm");
+
+    private static DateTime TruncateToSeconds(DateTime value) =>
+        value.AddTicks(-(value.Ticks % TimeSpan.TicksPerSecond));
 }
 
 public sealed class CrearReservaV2Request
