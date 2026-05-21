@@ -84,7 +84,7 @@ export class ReservaCheckoutPageComponent implements OnInit {
   cantidades: Record<string, number> = {};
   datoFacturacionGuid = '';
   fechaMinima = this.today();
-  form = { fecha: this.today(), horGuid: '', origenCanal: 'WEB', expiracionMinutos: 15, porcentajeIva: 15 };
+  form = { fecha: this.today(), horGuid: '', origenCanal: 'WEB', expiracionMinutos: 15, porcentajeIva: 12 };
 
   constructor(
     private readonly api: ApiService,
@@ -130,13 +130,21 @@ export class ReservaCheckoutPageComponent implements OnInit {
   previsualizar() {
     if (!this.validarFechaReserva()) return;
 
-    this.api.previsualizarReserva(this.request()).subscribe({
-      next: (response) => {
-        this.resumen.set(response.data);
-        this.notifications.success('Resumen actualizado.');
-      },
-      error: (error: Error) => this.notifications.error(error.message)
+    const atraccion = this.atraccion();
+    if (!atraccion) return;
+    const lineas = this.lineasSeleccionadas();
+    const subtotal = lineas.reduce((total, linea) => {
+      const ticket = atraccion.tickets.find((item) => item.guid === linea.ticketGuid);
+      return total + Number(ticket?.precio ?? 0) * linea.cantidad;
+    }, 0);
+    const valorIva = Number((subtotal * (this.form.porcentajeIva / 100)).toFixed(2));
+    this.resumen.set({
+      subtotal,
+      valor_iva: valorIva,
+      total: Number((subtotal + valorIva).toFixed(2)),
+      moneda: atraccion.tickets[0]?.moneda ?? 'USD'
     });
+    this.notifications.success('Resumen actualizado.');
   }
 
   crear() {
@@ -153,18 +161,23 @@ export class ReservaCheckoutPageComponent implements OnInit {
   }
 
   private request() {
-    const lineas = Object.entries(this.cantidades)
-      .filter(([, cantidad]) => Number(cantidad) > 0)
-      .map(([tckGuid, cantidad]) => ({ tck_guid: tckGuid, cantidad: Number(cantidad) }));
+    const lineas = this.lineasSeleccionadas();
 
     return {
-      hor_guid: this.form.horGuid,
+      atraccionGuid: this.guid,
+      horarioGuid: this.form.horGuid,
       fecha: this.form.fecha,
       lineas,
-      origen_canal: this.form.origenCanal,
-      expiracion_minutos: this.form.expiracionMinutos,
-      porcentaje_iva: this.form.porcentajeIva
+      origenCanal: this.form.origenCanal,
+      expiracionMinutos: this.form.expiracionMinutos,
+      porcentajeIva: this.form.porcentajeIva
     };
+  }
+
+  private lineasSeleccionadas() {
+    return Object.entries(this.cantidades)
+      .filter(([, cantidad]) => Number(cantidad) > 0)
+      .map(([ticketGuid, cantidad]) => ({ ticketGuid, cantidad: Number(cantidad) }));
   }
 
   private validarFechaReserva() {

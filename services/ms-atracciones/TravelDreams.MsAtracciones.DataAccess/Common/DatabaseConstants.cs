@@ -42,6 +42,7 @@ public static class DatabaseConstants
         public const string AtraccionIncluye = "atraccion_incluye";
         public const string Ticket = "ticket";
         public const string Horario = "horario";
+        public const string HorarioRegla = "horario_regla";
         public const string Reservas = "reservas";
         public const string ReservaDetalle = "reserva_detalle";
         public const string ReservaEstadoHistorial = "reserva_estado_historial";

@@ -10,12 +10,10 @@ namespace TravelDreams.MsReservas.Api.Controllers;
 public sealed class ReservasV2Controller : ControllerBase
 {
     private readonly IReservasService _reservas;
-    private readonly IClientesService _clientes;
 
-    public ReservasV2Controller(IReservasService reservas, IClientesService clientes)
+    public ReservasV2Controller(IReservasService reservas)
     {
         _reservas = reservas;
-        _clientes = clientes;
     }
 
     [HttpPost]
@@ -26,32 +24,17 @@ public sealed class ReservasV2Controller : ControllerBase
         if (request.Lineas.Count == 0) return BadRequest(Error(400, "Body invalido", "Debe enviar al menos una linea."));
         if (request.Lineas.Any(x => x.TckGuid == Guid.Empty || x.Cantidad < 1)) return BadRequest(Error(400, "Body invalido", "Cada linea debe tener tck_guid y cantidad mayor o igual a 1."));
 
-        var isBookingIntegration = IsBookingIntegration();
-        if (isBookingIntegration && request.ClienteInvitado is null)
+        if (request.ClienteInvitado is null)
         {
             return BadRequest(Error(400, "Body invalido", "cliente_invitado es obligatorio para reservas creadas por Booking."));
         }
 
-        Guid? clienteGuid = null;
-        ClienteInvitadoV2Request? clienteInvitado = request.ClienteInvitado;
-        if (!isBookingIntegration && TryGetUserGuid(out _))
-        {
-            clienteGuid = await ResolveClienteGuidFromHeadersAsync(ct);
-            clienteInvitado = null;
-        }
-
-        if (!clienteGuid.HasValue && clienteInvitado is null)
-        {
-            return BadRequest(Error(400, "Body invalido", "cliente_invitado es obligatorio cuando no se envia JWT de cliente."));
-        }
-
         var model = new CrearReservaRequest
         {
-            ClienteGuid = clienteGuid,
-            ClienteInvitado = clienteInvitado?.ToClienteRequest(),
+            ClienteInvitado = request.ClienteInvitado.ToClienteRequest(),
             AtraccionGuid = request.AtGuid,
             HorarioGuid = request.HorGuid,
-            OrigenCanal = isBookingIntegration ? "BOOKING" : request.OrigenCanal ?? "BOOKING",
+            OrigenCanal = "BOOKING",
             PorcentajeIva = 12,
             ExpiracionMinutos = 30,
             Lineas = request.Lineas.Select(x => new CrearReservaLineaRequest
@@ -71,22 +54,7 @@ public sealed class ReservasV2Controller : ControllerBase
         if (page < 1) return BadRequest(Error(400, "Parametro invalido", "El campo 'page' debe ser mayor o igual a 1."));
         if (limit < 1 || limit > 50) return BadRequest(Error(400, "Parametro invalido", "El campo 'limit' debe estar entre 1 y 50."));
 
-        IReadOnlyList<ReservaResponse> reservas;
-        if (IsBookingIntegration())
-        {
-            reservas = await _reservas.ListarPorCanalAsync("BOOKING", null, ct);
-        }
-        else
-        {
-            var clienteGuid = await ResolveClienteGuidFromHeadersAsync(ct);
-            if (!IsAdmin() && !clienteGuid.HasValue)
-            {
-                return Unauthorized(Error(401, "Token ausente o invalido", "No se pudo resolver el cliente autenticado."));
-            }
-
-            reservas = await _reservas.ListarAsync(IsAdmin() ? null : clienteGuid, null, ct);
-        }
-
+        var reservas = await _reservas.ListarPorCanalAsync("BOOKING", null, ct);
         var total = reservas.Count;
         var data = reservas
             .OrderByDescending(x => x.FechaReservaUtc)
@@ -115,8 +83,7 @@ public sealed class ReservasV2Controller : ControllerBase
     {
         var data = await _reservas.ObtenerAsync(guid, ct);
         if (data is null) return NotFound(new { status = 404, error = "Reserva no encontrada." });
-
-        if (!await CanAccessReservaAsync(data, ct)) return StatusCode(403, new { status = 403, error = "La reserva no pertenece al cliente autenticado." });
+        if (!IsBookingReserva(data)) return NotFound(new { status = 404, error = "Reserva no encontrada." });
 
         return Ok(new { status = 200, message = "Operacion exitosa", data = ToV2Detail(data) });
     }
@@ -162,41 +129,8 @@ public sealed class ReservasV2Controller : ControllerBase
         }
     };
 
-    private async Task<Guid?> ResolveClienteGuidFromHeadersAsync(CancellationToken ct)
-    {
-        if (!TryGetUserGuid(out var usuarioGuid)) return null;
-        var cliente = await _clientes.ObtenerPorUsuarioGuidAsync(usuarioGuid, ct);
-        return cliente?.Guid;
-    }
-
-    private async Task<bool> CanAccessReservaAsync(ReservaResponse reserva, CancellationToken ct)
-    {
-        if (IsAdmin()) return true;
-        if (IsBookingIntegration())
-        {
-            return string.Equals(reserva.OrigenCanal, "BOOKING", StringComparison.OrdinalIgnoreCase);
-        }
-
-        var clienteGuid = await ResolveClienteGuidFromHeadersAsync(ct);
-        return clienteGuid.HasValue && clienteGuid.Value == reserva.ClienteGuid;
-    }
-
-    private bool TryGetUserGuid(out Guid usuarioGuid)
-    {
-        usuarioGuid = Guid.Empty;
-        return Request.Headers.TryGetValue("X-User-Guid", out var value)
-            && Guid.TryParse(value.ToString(), out usuarioGuid);
-    }
-
-    private bool IsAdmin() =>
-        Request.Headers.TryGetValue("X-Roles", out var roles)
-        && roles.ToString().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Any(x => x.Equals("ADMIN", StringComparison.OrdinalIgnoreCase));
-
-    private bool IsBookingIntegration() =>
-        Request.Headers.TryGetValue("X-Roles", out var roles)
-        && roles.ToString().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Any(x => x.Equals("BOOKING_INTEGRATION", StringComparison.OrdinalIgnoreCase));
+    private static bool IsBookingReserva(ReservaResponse reserva) =>
+        string.Equals(reserva.OrigenCanal, "BOOKING", StringComparison.OrdinalIgnoreCase);
 
     private object Error(int status, string error, string detail) => new
     {

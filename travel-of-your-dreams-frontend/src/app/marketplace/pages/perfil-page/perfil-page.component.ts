@@ -65,7 +65,7 @@ import { ApiService } from '../../../core/api/api.service';
               <span><strong>{{ item.nombre || item.razon_social || item.correo }}</strong><small>{{ item.numero_identificacion || item.numeroIdentificacion }}</small></span>
               <span class="actions">
                 <button class="btn secondary" type="button" (click)="editarDato(item)">Editar</button>
-                <button class="btn danger" type="button" (click)="eliminarDato(item.id)">Eliminar</button>
+                <button class="btn danger" type="button" (click)="eliminarDato(item.guid)">Eliminar</button>
               </span>
             </div>
           } @empty {
@@ -136,9 +136,9 @@ export class PerfilPageComponent implements OnInit {
     };
   }
 
-  eliminarDato(id: number) {
+  eliminarDato(guid: string) {
     if (!confirm('Eliminar dato de facturacion?')) return;
-    this.api.eliminarDatosFacturacion(id).subscribe(() => {
+    this.api.eliminarDatosFacturacion(guid).subscribe(() => {
       this.mensaje.set('Dato eliminado.');
       this.cargar();
     });

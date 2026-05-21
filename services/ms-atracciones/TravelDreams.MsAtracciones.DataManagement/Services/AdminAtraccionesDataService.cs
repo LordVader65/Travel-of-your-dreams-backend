@@ -179,17 +179,97 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
 
     public async Task<HorarioAdminDataModel> GuardarHorarioAsync(HorarioUpsertDataModel model, CancellationToken ct = default)
     {
+        if (!model.Fecha.HasValue) throw new InvalidOperationException("Fecha es obligatoria para crear un horario puntual.");
+        await EnsureAtraccionExistsAsync(model.AtraccionId, ct);
         var entity = model.Guid.HasValue ? await _db.Horarios.FirstOrDefaultAsync(x => x.hor_guid == model.Guid, ct) : null;
         if (entity is null) { entity = new HorarioEntity { at_id = model.AtraccionId, hor_usuario_ingreso = model.Usuario, hor_ip_ingreso = model.Ip }; _db.Horarios.Add(entity); }
-        entity.at_id = model.AtraccionId; entity.hor_fecha = model.Fecha; entity.hor_hora_inicio = model.HoraInicio; entity.hor_hora_fin = model.HoraFin; entity.hor_cupos_disponibles = model.CuposDisponibles; entity.hor_dias_semana = model.DiasSemana; entity.hor_fecha_mod = DateTime.UtcNow; entity.hor_usuario_mod = model.Usuario; entity.hor_ip_mod = model.Ip;
+        entity.at_id = model.AtraccionId; entity.hor_fecha = model.Fecha.Value; entity.hor_hora_inicio = model.HoraInicio; entity.hor_hora_fin = model.HoraFin; entity.hor_cupos_disponibles = model.CuposDisponibles; entity.hor_dias_semana = model.DiasSemana; entity.hor_fecha_mod = DateTime.UtcNow; entity.hor_usuario_mod = model.Usuario; entity.hor_ip_mod = model.Ip;
         await _db.SaveChangesAsync(ct);
         return new HorarioAdminDataModel { Id = entity.hor_id, Guid = entity.hor_guid, AtraccionId = entity.at_id, Fecha = entity.hor_fecha, HoraInicio = entity.hor_hora_inicio, HoraFin = entity.hor_hora_fin, CuposDisponibles = entity.hor_cupos_disponibles, DiasSemana = entity.hor_dias_semana, Estado = entity.hor_estado };
+    }
+
+    public async Task<HorarioGeneracionDataModel> GuardarReglaYGenerarHorariosAsync(HorarioUpsertDataModel model, CancellationToken ct = default)
+    {
+        if (!model.FechaInicio.HasValue || !model.FechaFin.HasValue) throw new InvalidOperationException("Fecha inicio y fecha fin son obligatorias para generar horarios.");
+        await EnsureAtraccionExistsAsync(model.AtraccionId, ct);
+
+        var regla = new HorarioReglaEntity
+        {
+            at_id = model.AtraccionId,
+            hreg_hora_inicio = model.HoraInicio,
+            hreg_hora_fin = model.HoraFin,
+            hreg_dias_semana = model.DiasSemana,
+            hreg_cupos = model.CuposDisponibles,
+            hreg_fecha_inicio = model.FechaInicio.Value,
+            hreg_fecha_fin = model.FechaFin.Value,
+            hreg_usuario_ingreso = model.Usuario,
+            hreg_ip_ingreso = model.Ip
+        };
+        _db.HorarioReglas.Add(regla);
+
+        var selectedDays = ParseDiasSemana(model.DiasSemana);
+        var existingDates = (await _db.Horarios
+            .Where(x => x.at_id == model.AtraccionId
+                && x.hor_fecha >= model.FechaInicio.Value
+                && x.hor_fecha <= model.FechaFin.Value
+                && x.hor_hora_inicio == model.HoraInicio)
+            .Select(x => x.hor_fecha)
+            .ToListAsync(ct))
+            .ToHashSet();
+
+        var generated = 0;
+        var skipped = 0;
+        for (var date = model.FechaInicio.Value; date <= model.FechaFin.Value; date = date.AddDays(1))
+        {
+            if (!selectedDays.Contains((int)date.DayOfWeek)) continue;
+            if (existingDates.Contains(date))
+            {
+                skipped++;
+                continue;
+            }
+
+            _db.Horarios.Add(new HorarioEntity
+            {
+                at_id = model.AtraccionId,
+                hor_fecha = date,
+                hor_hora_inicio = model.HoraInicio,
+                hor_hora_fin = model.HoraFin,
+                hor_cupos_disponibles = model.CuposDisponibles,
+                hor_dias_semana = model.DiasSemana,
+                hor_usuario_ingreso = model.Usuario,
+                hor_ip_ingreso = model.Ip
+            });
+            generated++;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return new HorarioGeneracionDataModel
+        {
+            Regla = MapRegla(regla),
+            Generados = generated,
+            Existentes = skipped
+        };
     }
 
     public async Task<bool> DesactivarHorarioAsync(Guid guid, string usuario, CancellationToken ct = default)
     {
         var entity = await _db.Horarios.FirstOrDefaultAsync(x => x.hor_guid == guid, ct); if (entity is null) return false;
         entity.hor_estado = "I"; entity.hor_fecha_eliminacion = DateTime.UtcNow; entity.hor_usuario_eliminacion = usuario; await _db.SaveChangesAsync(ct); return true;
+    }
+
+    public async Task<int> DesactivarHorariosVencidosAsync(string usuario, CancellationToken ct = default)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var horarios = await _db.Horarios.Where(x => x.hor_estado == "A" && x.hor_fecha < today).ToListAsync(ct);
+        foreach (var horario in horarios)
+        {
+            horario.hor_estado = "I";
+            horario.hor_fecha_eliminacion = DateTime.UtcNow;
+            horario.hor_usuario_eliminacion = usuario;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return horarios.Count;
     }
 
     public async Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasAsync(CancellationToken ct = default)
@@ -285,4 +365,29 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
 
         return model;
     }
+
+    private async Task EnsureAtraccionExistsAsync(int atraccionId, CancellationToken ct)
+    {
+        var exists = await _db.Atracciones.AnyAsync(x => x.at_id == atraccionId && x.at_estado == "A", ct);
+        if (!exists) throw new InvalidOperationException("Atraccion no encontrada.");
+    }
+
+    private static HashSet<int> ParseDiasSemana(string diasSemana) =>
+        diasSemana.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(int.Parse)
+            .ToHashSet();
+
+    private static HorarioReglaAdminDataModel MapRegla(HorarioReglaEntity entity) => new()
+    {
+        Id = entity.hreg_id,
+        Guid = entity.hreg_guid,
+        AtraccionId = entity.at_id,
+        HoraInicio = entity.hreg_hora_inicio,
+        HoraFin = entity.hreg_hora_fin,
+        DiasSemana = entity.hreg_dias_semana,
+        Cupos = entity.hreg_cupos,
+        FechaInicio = entity.hreg_fecha_inicio,
+        FechaFin = entity.hreg_fecha_fin,
+        Estado = entity.hreg_estado
+    };
 }

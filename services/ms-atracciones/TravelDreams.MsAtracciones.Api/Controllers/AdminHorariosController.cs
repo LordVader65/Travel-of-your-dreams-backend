@@ -26,4 +26,8 @@ public sealed class AdminHorariosController : ControllerBase
     [HttpDelete("{guid:guid}")]
     public async Task<IActionResult> Eliminar(Guid guid, CancellationToken ct) =>
         await _admin.DesactivarHorarioAsync(guid, ct) ? NoContent() : NotFound();
+
+    [HttpPost("desactivar-vencidos")]
+    public async Task<IActionResult> DesactivarVencidos(CancellationToken ct) =>
+        Ok(new { status = StatusCodes.Status200OK, data = new { total = await _admin.DesactivarHorariosVencidosAsync(ct) } });
 }

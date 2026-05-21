@@ -27,7 +27,9 @@ public interface IAdminAtraccionesDataService
 
     Task<IReadOnlyList<HorarioAdminDataModel>> ListarHorariosAsync(CancellationToken ct = default);
     Task<HorarioAdminDataModel> GuardarHorarioAsync(HorarioUpsertDataModel model, CancellationToken ct = default);
+    Task<HorarioGeneracionDataModel> GuardarReglaYGenerarHorariosAsync(HorarioUpsertDataModel model, CancellationToken ct = default);
     Task<bool> DesactivarHorarioAsync(Guid guid, string usuario, CancellationToken ct = default);
+    Task<int> DesactivarHorariosVencidosAsync(string usuario, CancellationToken ct = default);
 
     Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasAsync(CancellationToken ct = default);
     Task<IReadOnlyList<ReseniaDataModel>> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default);

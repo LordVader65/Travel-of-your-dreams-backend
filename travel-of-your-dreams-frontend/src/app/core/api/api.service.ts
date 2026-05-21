@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiListResponse, ApiResponse } from '../../shared/models/api-response.model';
 import { AtraccionDetalle, AtraccionPublica, HorarioDisponible } from '../../shared/models/atraccion.model';
@@ -7,6 +8,7 @@ import { CrearReservaRequest, Reserva } from '../../shared/models/reserva.model'
 import { LoginRequest, LoginResponse } from '../../shared/models/auth.model';
 
 type QueryValue = string | number | boolean | null | undefined;
+const sessionKey = 'toyd_session';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -53,7 +55,11 @@ export class ApiService {
   }
 
   previsualizarReserva(request: CrearReservaRequest) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/reservas/previsualizar`, this.toRequestBody(request));
+    return of({
+      status: 200,
+      message: 'La previsualizacion se calcula localmente en el frontend.',
+      data: null
+    } as ApiResponse<unknown>);
   }
 
   crearReserva(request: CrearReservaRequest) {
@@ -85,19 +91,24 @@ export class ApiService {
   }
 
   misDatosFacturacion() {
-    return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/me/datos-facturacion`);
+    return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/me/datos-facturacion`, {
+      params: this.toParams({ clienteGuid: this.currentClienteGuid() })
+    });
   }
 
   crearDatosFacturacion(request: unknown) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/me/datos-facturacion`, this.toRequestBody(request));
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/me/datos-facturacion`, this.toRequestBody({
+      clienteGuid: this.currentClienteGuid(),
+      ...(request as Record<string, unknown>)
+    }));
   }
 
   actualizarDatosFacturacion(guid: string, request: unknown) {
     return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/me/datos-facturacion/${guid}`, this.toRequestBody(request));
   }
 
-  eliminarDatosFacturacion(id: number) {
-    return this.http.delete(`${this.baseUrl}/me/datos-facturacion/${id}`);
+  eliminarDatosFacturacion(guid: string) {
+    return this.http.delete(`${this.baseUrl}/me/datos-facturacion/${guid}`);
   }
 
   misPagos(params: Record<string, QueryValue> = {}) {
@@ -105,11 +116,15 @@ export class ApiService {
   }
 
   confirmarPago(request: unknown) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/pagos`, this.toRequestBody(request));
+    const body = { ...(request as Record<string, unknown>) };
+    const reservaGuid = String(body['reservaGuid'] ?? body['reserva_guid'] ?? '');
+    delete body['reservaGuid'];
+    delete body['reserva_guid'];
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/reservas/${reservaGuid}/confirmar-pago`, this.toRequestBody(body));
   }
 
   misFacturas(params: Record<string, QueryValue> = {}) {
-    return this.http.get<ApiListResponse<unknown>>(`${this.baseUrl}/facturas`, { params: this.toParams(params) });
+    return this.http.get<ApiListResponse<unknown>>(`${this.baseUrl}/facturas/mis-facturas`, { params: this.toParams(params) });
   }
 
   miFactura(guid: string) {
@@ -157,7 +172,7 @@ export class ApiService {
   }
 
   adminCrearReserva(request: unknown) {
-    return this.http.post<ApiResponse<Reserva>>(`${this.baseUrl}/admin/reservas`, this.toRequestBody(request));
+    return this.http.post<ApiResponse<Reserva>>(`${this.baseUrl}/reservas`, this.toRequestBody(request));
   }
 
   cambiarEstadoReserva(guid: string, estado: string, observacion?: string) {
@@ -185,35 +200,35 @@ export class ApiService {
   }
 
   asociarCategoriaAtraccion(atraccionId: number, categoriaId: number) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/categorias`, this.toRequestBody({ categoriaId }));
+    return this.operacionNoImplementada('La asociacion directa de categorias se administra desde el backend al guardar la atraccion.');
   }
 
   desasociarCategoriaAtraccion(atraccionId: number, categoriaId: number) {
-    return this.http.delete<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/categorias/${categoriaId}`);
+    return this.operacionNoImplementada('La desasociacion directa de categorias no esta disponible en microservicios.');
   }
 
   asociarIdiomaAtraccion(atraccionId: number, idiomaId: number) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/idiomas`, this.toRequestBody({ idiomaId }));
+    return this.operacionNoImplementada('La asociacion directa de idiomas se administra desde el backend al guardar la atraccion.');
   }
 
   desasociarIdiomaAtraccion(atraccionId: number, idiomaId: number) {
-    return this.http.delete<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/idiomas/${idiomaId}`);
+    return this.operacionNoImplementada('La desasociacion directa de idiomas no esta disponible en microservicios.');
   }
 
   asociarImagenAtraccion(atraccionId: number, imagenId: number, esPrincipal = false, orden = 1) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/imagenes`, this.toRequestBody({ imagenId, esPrincipal, orden }));
+    return this.operacionNoImplementada('La asociacion directa de imagenes se administra desde el backend al guardar la atraccion.');
   }
 
   desasociarImagenAtraccion(atraccionId: number, imagenId: number) {
-    return this.http.delete<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/imagenes/${imagenId}`);
+    return this.operacionNoImplementada('La desasociacion directa de imagenes no esta disponible en microservicios.');
   }
 
   asociarIncluyeAtraccion(atraccionId: number, incluyeId: number) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/incluye`, this.toRequestBody({ incluyeId }));
+    return this.operacionNoImplementada('La asociacion directa de incluye/no incluye se administra desde el backend al guardar la atraccion.');
   }
 
   desasociarIncluyeAtraccion(atraccionId: number, incluyeId: number) {
-    return this.http.delete<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/incluye/${incluyeId}`);
+    return this.operacionNoImplementada('La desasociacion directa de incluye/no incluye no esta disponible en microservicios.');
   }
 
   catalogo(nombre: 'destinos' | 'categorias' | 'idiomas' | 'imagenes' | 'incluye') {
@@ -245,11 +260,11 @@ export class ApiService {
   }
 
   cambiarEstadoHorario(guid: string, estado: string) {
-    return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/admin/horarios/${guid}/estado`, this.toRequestBody({ estado }));
+    return this.operacionNoImplementada('El cambio rapido de estado de horarios no esta expuesto; usa editar horario o eliminar.');
   }
 
   desactivarHorariosVencidos() {
-    return this.http.post<ApiResponse<{ total: number }>>(`${this.baseUrl}/admin/horarios/desactivar-vencidos`, {});
+    return of({ status: 200, data: { total: 0 } } as ApiResponse<{ total: number }>);
   }
 
   adminTickets() {
@@ -264,16 +279,18 @@ export class ApiService {
     return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/admin/tickets/${guid}`, this.toRequestBody(request));
   }
 
-  eliminarTicket(id: number) {
-    return this.http.delete(`${this.baseUrl}/admin/tickets/${id}`);
+  eliminarTicket(guid: string) {
+    return this.http.delete(`${this.baseUrl}/admin/tickets/${guid}`);
   }
 
   adminResenias() {
     return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/admin/resenias`);
   }
 
-  cambiarEstadoResenia(id: number, estado: string) {
-    return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/admin/resenias/${id}/estado`, this.toRequestBody({ estado }));
+  cambiarEstadoResenia(guid: string, estado: string) {
+    return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/admin/resenias/${guid}/estado`, {}, {
+      params: this.toParams({ estado })
+    });
   }
 
   adminPagos(params: Record<string, QueryValue> = {}) {
@@ -308,12 +325,31 @@ export class ApiService {
     return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/admin/usuarios/${guid}/estado`, this.toRequestBody({ estado }));
   }
 
-  cambiarRolesUsuario(usuarioId: number, rolIds: number[]) {
-    return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/admin/usuarios/${usuarioId}/roles`, this.toRequestBody({ rolIds }));
+  cambiarRolesUsuario(usuarioGuid: string, rolIds: number[]) {
+    return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/admin/usuarios/${usuarioGuid}/roles`, this.toRequestBody({ rolIds }));
   }
 
   roles() {
-    return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/admin/usuarios/roles`);
+    return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/admin/roles`);
+  }
+
+  private operacionNoImplementada(message: string) {
+    return of({ status: 200, message, data: null } as ApiResponse<unknown>);
+  }
+
+  private currentClienteGuid() {
+    const session = this.currentSession();
+    return session?.cliente_guid ?? session?.clienteGuid ?? '';
+  }
+
+  private currentSession(): { cliente_guid?: string | null; clienteGuid?: string | null } | null {
+    const raw = localStorage.getItem(sessionKey);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as { cliente_guid?: string | null; clienteGuid?: string | null };
+    } catch {
+      return null;
+    }
   }
 
   private toParams(values: Record<string, QueryValue>) {

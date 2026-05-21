@@ -10,6 +10,27 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("GatewayCors", policy =>
+    {
+        var origins = builder.Configuration["Cors:AllowedOrigins"]
+            ?.Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? [];
+
+        if (origins.Length == 0)
+        {
+            policy.AllowAnyOrigin();
+        }
+        else
+        {
+            policy.WithOrigins(origins);
+        }
+
+        policy.AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 builder.Services.AddHttpClient("gateway-proxy");
 builder.Services.AddHttpClient<AuditHttpClient>((provider, client) =>
 {
@@ -29,6 +50,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapHealthChecks("/health");
+app.UseCors("GatewayCors");
 app.MapGet("/", (IConfiguration configuration) => Results.Ok(new
 {
     service = "api-gateway",

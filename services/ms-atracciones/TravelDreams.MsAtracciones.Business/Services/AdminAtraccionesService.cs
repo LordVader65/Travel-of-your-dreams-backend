@@ -63,10 +63,31 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
     public Task<bool> DesactivarTicketAsync(Guid guid, CancellationToken ct = default) => _data.DesactivarTicketAsync(guid, "admin", ct);
 
     public async Task<object> ListarHorariosAsync(CancellationToken ct = default) => await _data.ListarHorariosAsync(ct);
-    public async Task<object> GuardarHorarioAsync(Guid? guid, AdminHorarioRequest request, CancellationToken ct = default) =>
-        await _data.GuardarHorarioAsync(new HorarioUpsertDataModel { Guid = guid, AtraccionId = request.AtraccionId, Fecha = request.Fecha, HoraInicio = request.HoraInicio, HoraFin = request.HoraFin, CuposDisponibles = request.CuposDisponibles, DiasSemana = request.DiasSemana, Usuario = "admin" }, ct);
+    public async Task<object> GuardarHorarioAsync(Guid? guid, AdminHorarioRequest request, CancellationToken ct = default)
+    {
+        ValidateHorario(request, guid.HasValue);
+
+        var model = new HorarioUpsertDataModel
+        {
+            Guid = guid,
+            AtraccionId = request.AtraccionId,
+            Fecha = request.Fecha,
+            HoraInicio = request.HoraInicio,
+            HoraFin = request.HoraFin,
+            CuposDisponibles = request.CuposDisponibles,
+            DiasSemana = NormalizeDiasSemana(request.DiasSemana),
+            FechaInicio = request.FechaInicio,
+            FechaFin = request.FechaFin,
+            Usuario = "admin"
+        };
+
+        return request.Fecha.HasValue
+            ? await _data.GuardarHorarioAsync(model, ct)
+            : await _data.GuardarReglaYGenerarHorariosAsync(model, ct);
+    }
 
     public Task<bool> DesactivarHorarioAsync(Guid guid, CancellationToken ct = default) => _data.DesactivarHorarioAsync(guid, "admin", ct);
+    public Task<int> DesactivarHorariosVencidosAsync(CancellationToken ct = default) => _data.DesactivarHorariosVencidosAsync("admin", ct);
 
     public async Task<object> ListarReseniasAsync(CancellationToken ct = default) => await _data.ListarReseniasAsync(ct);
     public async Task<object> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default) =>
@@ -103,4 +124,43 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
         _data.CambiarEstadoReseniaAsync(guid, estado, "admin", ct);
 
     private static async Task<object> Wrap<T>(Task<T> task) where T : notnull => await task;
+
+    private static void ValidateHorario(AdminHorarioRequest request, bool isUpdate)
+    {
+        if (request.AtraccionId <= 0) throw new InvalidOperationException("Atraccion es obligatoria.");
+        if (request.CuposDisponibles <= 0) throw new InvalidOperationException("Cupos debe ser mayor a cero.");
+        if (request.HoraFin.HasValue && request.HoraFin.Value <= request.HoraInicio)
+        {
+            throw new InvalidOperationException("Hora fin debe ser mayor a hora inicio.");
+        }
+
+        if (request.Fecha.HasValue)
+        {
+            return;
+        }
+
+        if (isUpdate) throw new InvalidOperationException("Fecha es obligatoria para actualizar un horario puntual.");
+
+        var fechaInicio = request.FechaInicio ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var fechaFin = request.FechaFin ?? fechaInicio.AddDays(89);
+        if (fechaFin < fechaInicio) throw new InvalidOperationException("Fecha fin debe ser mayor o igual a fecha inicio.");
+        if (fechaFin.DayNumber - fechaInicio.DayNumber > 179) throw new InvalidOperationException("El rango maximo de generacion es 180 dias.");
+        NormalizeDiasSemana(request.DiasSemana);
+        request.FechaInicio = fechaInicio;
+        request.FechaFin = fechaFin;
+    }
+
+    private static string NormalizeDiasSemana(string? value)
+    {
+        var days = (value ?? string.Empty)
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(day => int.TryParse(day, out var parsed) ? parsed : -1)
+            .Distinct()
+            .Order()
+            .ToArray();
+
+        if (days.Length == 0) throw new InvalidOperationException("Debe seleccionar al menos un dia de atencion.");
+        if (days.Any(day => day is < 0 or > 6)) throw new InvalidOperationException("Dias de semana debe contener valores entre 0 y 6.");
+        return string.Join(',', days);
+    }
 }

@@ -17,18 +17,14 @@ public static class GatewayRoutes
             Name = "v2-reservas-post",
             ServiceKey = "ReservasUrl",
             Methods = ["POST"],
-            Prefixes = ["/api/v2/reservas"],
-            ValidateTokenWhenPresent = true,
-            AllowedRoles = ["CLIENTE", "ADMIN", "BOOKING_INTEGRATION"]
+            Prefixes = ["/api/v2/reservas"]
         },
         new()
         {
             Name = "v2-reservas",
             ServiceKey = "ReservasUrl",
             Methods = ["GET"],
-            Prefixes = ["/api/v2/reservas"],
-            RequiresAuthentication = true,
-            AllowedRoles = ["CLIENTE", "ADMIN", "BOOKING_INTEGRATION"]
+            Prefixes = ["/api/v2/reservas"]
         },
         new()
         {

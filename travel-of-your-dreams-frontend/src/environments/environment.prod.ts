@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://travel-of-your-dreams-backend.onrender.com/api/v1'
+  apiBaseUrl: 'https://api-gateway-travel-dreams.onrender.com/api/v1',
+  bookingApiBaseUrl: 'https://api-gateway-travel-dreams.onrender.com/api/v2'
 };

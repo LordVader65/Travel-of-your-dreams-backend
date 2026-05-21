@@ -39,5 +39,6 @@ public sealed class AtraccionEntity
     public ICollection<AtraccionIncluyeEntity> AtraccionIncluyes { get; set; } = [];
     public ICollection<TicketEntity> Tickets { get; set; } = [];
     public ICollection<HorarioEntity> Horarios { get; set; } = [];
+    public ICollection<HorarioReglaEntity> HorarioReglas { get; set; } = [];
     public ICollection<ReseniaEntity> Resenias { get; set; } = [];
 }
