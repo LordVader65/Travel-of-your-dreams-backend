@@ -17,6 +17,7 @@ public interface IAdminAtraccionesService
     Task<object> ListarHorariosAsync(CancellationToken ct = default);
     Task<object> GuardarHorarioAsync(Guid? guid, AdminHorarioRequest request, CancellationToken ct = default);
     Task<bool> DesactivarHorarioAsync(Guid guid, CancellationToken ct = default);
+    Task<int> DesactivarHorariosVencidosAsync(CancellationToken ct = default);
     Task<object> ListarReseniasAsync(CancellationToken ct = default);
     Task<object> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default);
     Task<object> CrearReseniaAsync(CrearReseniaRequest request, CancellationToken ct = default);

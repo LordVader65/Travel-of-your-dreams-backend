@@ -24,6 +24,7 @@ public sealed class AtraccionesDbContext : DbContext
     public DbSet<AtraccionIncluyeEntity> AtraccionIncluyes => Set<AtraccionIncluyeEntity>();
     public DbSet<TicketEntity> Tickets => Set<TicketEntity>();
     public DbSet<HorarioEntity> Horarios => Set<HorarioEntity>();
+    public DbSet<HorarioReglaEntity> HorarioReglas => Set<HorarioReglaEntity>();
     public DbSet<ReseniaEntity> Resenias => Set<ReseniaEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
