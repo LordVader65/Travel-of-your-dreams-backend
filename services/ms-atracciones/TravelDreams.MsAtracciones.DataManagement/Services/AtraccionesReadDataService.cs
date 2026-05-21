@@ -71,9 +71,9 @@ public sealed class AtraccionesReadDataService : IAtraccionesReadDataService
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<HorarioPublicoDataModel>> ListarHorariosPorAtraccionAsync(Guid atraccionGuid, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<HorarioPublicoDataModel>> ListarHorariosPorAtraccionAsync(Guid atraccionGuid, DateOnly? fecha = null, CancellationToken cancellationToken = default)
     {
-        return await _db.Horarios
+        var query = _db.Horarios
             .AsNoTracking()
             .Where(x => x.hor_estado == "A"
                 && x.hor_cupos_disponibles > 0
@@ -81,7 +81,14 @@ public sealed class AtraccionesReadDataService : IAtraccionesReadDataService
                 && x.Atraccion != null
                 && x.Atraccion.at_guid == atraccionGuid
                 && x.Atraccion.at_estado == "A"
-                && x.Atraccion.at_disponible)
+                && x.Atraccion.at_disponible);
+
+        if (fecha.HasValue)
+        {
+            query = query.Where(x => x.hor_fecha == fecha.Value);
+        }
+
+        return await query
             .OrderBy(x => x.hor_fecha)
             .ThenBy(x => x.hor_hora_inicio)
             .Select(x => new HorarioPublicoDataModel
@@ -106,6 +113,6 @@ public sealed class AtraccionesReadDataService : IAtraccionesReadDataService
 
         return atraccionGuid == Guid.Empty
             ? []
-            : await ListarHorariosPorAtraccionAsync(atraccionGuid, cancellationToken);
+            : await ListarHorariosPorAtraccionAsync(atraccionGuid, null, cancellationToken);
     }
 }

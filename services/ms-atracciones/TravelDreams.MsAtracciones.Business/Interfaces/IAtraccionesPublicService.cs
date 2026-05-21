@@ -7,6 +7,6 @@ public interface IAtraccionesPublicService
     Task<IReadOnlyList<AtraccionResponse>> ListarAtraccionesAsync(CancellationToken cancellationToken = default);
     Task<AtraccionResponse?> ObtenerAtraccionAsync(Guid guid, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TicketResponse>> ListarTicketsAsync(Guid atraccionGuid, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<HorarioResponse>> ListarHorariosPorAtraccionAsync(Guid atraccionGuid, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<HorarioResponse>> ListarHorariosPorAtraccionAsync(Guid atraccionGuid, DateOnly? fecha = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<HorarioResponse>> ListarHorariosPorTicketAsync(Guid ticketGuid, CancellationToken cancellationToken = default);
 }
