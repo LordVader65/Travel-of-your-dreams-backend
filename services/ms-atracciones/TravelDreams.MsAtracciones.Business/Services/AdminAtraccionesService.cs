@@ -27,11 +27,11 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
         {
             Id = id,
             Nombre = request.Nombre,
-            Codigo = request.Codigo,
+            Codigo = FirstNotBlank(request.Codigo, request.TagName),
             Descripcion = request.Descripcion,
             Tipo = request.Tipo,
             Pais = request.Pais,
-            ImagenUrl = request.ImagenUrl,
+            ImagenUrl = FirstNotBlank(request.ImagenUrl, request.Url),
             ParentId = request.ParentId
         };
 
@@ -128,6 +128,9 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
         _data.CambiarEstadoReseniaAsync(guid, estado, "admin", ct);
 
     private static async Task<object> Wrap<T>(Task<T> task) where T : notnull => await task;
+
+    private static string? FirstNotBlank(params string?[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
 
     private static void ValidateAtraccion(AdminAtraccionRequest request)
     {

@@ -79,15 +79,21 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
 
     public async Task<CatalogoItemDataModel> GuardarImagenAsync(CatalogoUpsertDataModel model, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(model.ImagenUrl))
+        {
+            throw new InvalidOperationException("URL de imagen es obligatoria.");
+        }
+
+        var imageUrl = model.ImagenUrl.Trim();
         var entity = model.Id.HasValue ? await _db.Imagenes.FirstOrDefaultAsync(x => x.img_id == model.Id, ct) : null;
         if (entity is null)
         {
-            entity = new ImagenEntity { img_url = model.ImagenUrl ?? model.Nombre, img_descripcion = model.Descripcion, img_usuario_ingreso = model.Usuario, img_ip_ingreso = model.Ip };
+            entity = new ImagenEntity { img_url = imageUrl, img_descripcion = model.Descripcion, img_usuario_ingreso = model.Usuario, img_ip_ingreso = model.Ip };
             _db.Imagenes.Add(entity);
         }
         else
         {
-            entity.img_url = model.ImagenUrl ?? entity.img_url; entity.img_descripcion = model.Descripcion; entity.img_fecha_mod = DateTime.UtcNow; entity.img_usuario_mod = model.Usuario; entity.img_ip_mod = model.Ip;
+            entity.img_url = imageUrl; entity.img_descripcion = model.Descripcion; entity.img_fecha_mod = DateTime.UtcNow; entity.img_usuario_mod = model.Usuario; entity.img_ip_mod = model.Ip;
         }
         await _db.SaveChangesAsync(ct);
         return new CatalogoItemDataModel { Id = entity.img_id, Guid = entity.img_guid, Nombre = entity.img_descripcion ?? entity.img_url, ImagenUrl = entity.img_url, Descripcion = entity.img_descripcion, Estado = entity.img_estado };
