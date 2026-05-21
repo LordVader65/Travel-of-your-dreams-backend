@@ -257,7 +257,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
             .Select(x => new { tck_guid = x.tck_guid, tipo = x.tck_tipo_participante, precio = x.tck_precio, moneda = x.tck_moneda })
             .ToListAsync(ct);
 
-        return Ok(new { status = 200, data });
+        return Ok(new { status = 200, message = "Tickets disponibles consultados correctamente.", data });
     }
 
     [HttpGet("{guid:guid}/horarios")]
@@ -273,7 +273,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
             .Select(x => new { hor_guid = x.hor_guid, fecha = x.hor_fecha, hora_inicio = FormatTime(x.hor_hora_inicio), hora_fin = FormatTime(x.hor_hora_fin), cupos = x.hor_cupos_disponibles })
             .ToListAsync(ct);
 
-        return Ok(new { status = 200, data });
+        return Ok(new { status = 200, message = "Horarios disponibles consultados correctamente.", data });
     }
 
     [HttpGet("{guid:guid}/horarios/{horarioGuid:guid}/tickets")]
@@ -289,7 +289,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
             .Select(x => new { tck_guid = x.tck_guid, tipo = x.tck_tipo_participante, precio = x.tck_precio, moneda = x.tck_moneda })
             .ToListAsync(ct);
 
-        return Ok(new { status = 200, data = new { items } });
+        return Ok(new { status = 200, message = "Tickets disponibles para el horario consultados correctamente.", data = new { items } });
     }
 
     private IQueryable<AtraccionEntity> BuildBaseQuery() =>
