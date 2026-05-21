@@ -136,13 +136,14 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
 
     public async Task<AtraccionAdminDataModel> GuardarAtraccionAsync(AtraccionUpsertDataModel model, CancellationToken ct = default)
     {
+        await EnsureDestinoExistsAsync(model.DestinoId, ct);
         var entity = model.Guid.HasValue ? await _db.Atracciones.FirstOrDefaultAsync(x => x.at_guid == model.Guid, ct) : null;
         if (entity is null)
         {
             entity = new AtraccionEntity { des_id = model.DestinoId, at_nombre = model.Nombre, at_usuario_ingreso = model.Usuario, at_ip_ingreso = model.Ip };
             _db.Atracciones.Add(entity);
         }
-        entity.des_id = model.DestinoId; entity.at_nombre = model.Nombre; entity.at_descripcion = model.Descripcion; entity.at_direccion = model.Direccion; entity.at_duracion_minutos = model.DuracionMinutos; entity.at_punto_encuentro = model.PuntoEncuentro; entity.at_precio_referencia = model.PrecioReferencia; entity.at_incluye_acompaniante = model.IncluyeAcompaniante; entity.at_incluye_transporte = model.IncluyeTransporte; entity.at_disponible = model.Disponible; entity.at_free_cancellation = model.FreeCancellation; entity.at_skip_the_line = model.SkipTheLine; entity.at_fecha_mod = DateTime.UtcNow; entity.at_usuario_mod = model.Usuario; entity.at_ip_mod = model.Ip;
+        entity.des_id = model.DestinoId; entity.at_num_establecimiento = model.NumeroEstablecimiento; entity.at_nombre = model.Nombre; entity.at_descripcion = model.Descripcion; entity.at_direccion = model.Direccion; entity.at_duracion_minutos = model.DuracionMinutos; entity.at_punto_encuentro = model.PuntoEncuentro; entity.at_precio_referencia = model.PrecioReferencia; entity.at_incluye_acompaniante = model.IncluyeAcompaniante; entity.at_incluye_transporte = model.IncluyeTransporte; entity.at_disponible = model.Disponible; entity.at_free_cancellation = model.FreeCancellation; entity.at_skip_the_line = model.SkipTheLine; entity.at_fecha_mod = DateTime.UtcNow; entity.at_usuario_mod = model.Usuario; entity.at_ip_mod = model.Ip;
         await _db.SaveChangesAsync(ct);
         return MapAtraccion.Compile().Invoke(entity);
     }
@@ -351,7 +352,7 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
 
     private static readonly System.Linq.Expressions.Expression<Func<AtraccionEntity, AtraccionAdminDataModel>> MapAtraccion = x => new AtraccionAdminDataModel
     {
-        Id = x.at_id, Guid = x.at_guid, DestinoId = x.des_id, Nombre = x.at_nombre, Descripcion = x.at_descripcion, Direccion = x.at_direccion, DuracionMinutos = x.at_duracion_minutos, PuntoEncuentro = x.at_punto_encuentro, PrecioReferencia = x.at_precio_referencia, IncluyeAcompaniante = x.at_incluye_acompaniante, IncluyeTransporte = x.at_incluye_transporte, Disponible = x.at_disponible, FreeCancellation = x.at_free_cancellation, SkipTheLine = x.at_skip_the_line, Estado = x.at_estado
+        Id = x.at_id, Guid = x.at_guid, DestinoId = x.des_id, NumeroEstablecimiento = x.at_num_establecimiento, Nombre = x.at_nombre, Descripcion = x.at_descripcion, Direccion = x.at_direccion, DuracionMinutos = x.at_duracion_minutos, PuntoEncuentro = x.at_punto_encuentro, PrecioReferencia = x.at_precio_referencia, IncluyeAcompaniante = x.at_incluye_acompaniante, IncluyeTransporte = x.at_incluye_transporte, Disponible = x.at_disponible, FreeCancellation = x.at_free_cancellation, SkipTheLine = x.at_skip_the_line, Estado = x.at_estado
     };
 
     private static ReseniaDataModel CompleteClienteId(ReseniaDataModel model)
@@ -370,6 +371,12 @@ public sealed class AdminAtraccionesDataService : IAdminAtraccionesDataService
     {
         var exists = await _db.Atracciones.AnyAsync(x => x.at_id == atraccionId && x.at_estado == "A", ct);
         if (!exists) throw new InvalidOperationException("Atraccion no encontrada.");
+    }
+
+    private async Task EnsureDestinoExistsAsync(int destinoId, CancellationToken ct)
+    {
+        var exists = await _db.Destinos.AnyAsync(x => x.des_id == destinoId && x.des_estado == "A", ct);
+        if (!exists) throw new InvalidOperationException("Destino no encontrado.");
     }
 
     private static HashSet<int> ParseDiasSemana(string diasSemana) =>
