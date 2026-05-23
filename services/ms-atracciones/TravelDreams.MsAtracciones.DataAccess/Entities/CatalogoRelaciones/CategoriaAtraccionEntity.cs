@@ -11,6 +11,7 @@ public sealed class CategoriaAtraccionEntity
     public DateTime? ca_fecha_eliminacion { get; set; }
     public string? ca_usuario_eliminacion { get; set; }
     public string ca_estado { get; set; } = "A";
+    public bool ca_es_principal { get; set; }
 
     public CategoriaEntity? Categoria { get; set; }
     public AtraccionEntity? Atraccion { get; set; }

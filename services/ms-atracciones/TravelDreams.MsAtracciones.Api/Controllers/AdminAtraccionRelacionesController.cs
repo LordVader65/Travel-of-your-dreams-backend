@@ -20,7 +20,7 @@ public sealed class AdminAtraccionRelacionesController : ControllerBase
 
         var categorias = await _db.CategoriaAtracciones.AsNoTracking()
             .Where(x => x.at_id == atraccionId && x.ca_estado == "A")
-            .Select(x => new { id = x.cat_id })
+            .Select(x => new { id = x.cat_id, es_principal = x.ca_es_principal })
             .ToListAsync(ct);
         var idiomas = await _db.IdiomaAtracciones.AsNoTracking()
             .Where(x => x.at_id == atraccionId && x.ia_estado == "A")
@@ -41,12 +41,19 @@ public sealed class AdminAtraccionRelacionesController : ControllerBase
     }
 
     [HttpPost("categorias/{categoriaId:int}")]
-    public async Task<IActionResult> AsociarCategoria(int atraccionId, int categoriaId, CancellationToken ct)
+    public async Task<IActionResult> AsociarCategoria(int atraccionId, int categoriaId, [FromQuery] bool esPrincipal = false, CancellationToken ct = default)
     {
         await EnsureAtraccionAsync(atraccionId, ct);
         if (!await _db.Categorias.AnyAsync(x => x.cat_id == categoriaId && x.cat_estado == "A", ct))
         {
             return NotFound(new { status = 404, error = "Categoria no encontrada." });
+        }
+
+        if (esPrincipal)
+        {
+            await _db.CategoriaAtracciones
+                .Where(x => x.at_id == atraccionId && x.ca_estado == "A")
+                .ExecuteUpdateAsync(x => x.SetProperty(p => p.ca_es_principal, false), ct);
         }
 
         var relation = await _db.CategoriaAtracciones.FirstOrDefaultAsync(x => x.at_id == atraccionId && x.cat_id == categoriaId, ct);
@@ -57,6 +64,7 @@ public sealed class AdminAtraccionRelacionesController : ControllerBase
         }
 
         relation.ca_estado = "A";
+        relation.ca_es_principal = esPrincipal || relation.ca_es_principal;
         relation.ca_fecha_eliminacion = null;
         relation.ca_usuario_eliminacion = null;
         await _db.SaveChangesAsync(ct);
@@ -69,6 +77,7 @@ public sealed class AdminAtraccionRelacionesController : ControllerBase
         var relation = await _db.CategoriaAtracciones.FirstOrDefaultAsync(x => x.at_id == atraccionId && x.cat_id == categoriaId, ct);
         if (relation is null) return NoContent();
         relation.ca_estado = "I";
+        relation.ca_es_principal = false;
         relation.ca_fecha_eliminacion = DateTime.UtcNow;
         relation.ca_usuario_eliminacion = "admin";
         await _db.SaveChangesAsync(ct);

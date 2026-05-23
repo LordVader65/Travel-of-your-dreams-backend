@@ -432,9 +432,19 @@ public sealed class AtraccionesV2Controller : ControllerBase
 
     private static dynamic BuildListItem(AtraccionEntity atraccion)
     {
-        var categorias = atraccion.CategoriaAtracciones.Where(x => x.ca_estado == "A" && x.Categoria != null && x.Categoria.cat_estado == "A").Select(x => x.Categoria!).ToList();
-        var categoriaPadre = categorias.FirstOrDefault(x => x.cat_parent_id is null);
-        var categoriaHija = categorias.FirstOrDefault(x => x.cat_parent_id is not null);
+        var categoriaRelaciones = atraccion.CategoriaAtracciones
+            .Where(x => x.ca_estado == "A" && x.Categoria != null && x.Categoria.cat_estado == "A")
+            .OrderByDescending(x => x.ca_es_principal)
+            .ThenBy(x => x.cat_id)
+            .ToList();
+        var categorias = categoriaRelaciones.Select(x => x.Categoria!).ToList();
+        var categoriaPrincipal = categoriaRelaciones.FirstOrDefault(x => x.ca_es_principal)?.Categoria;
+        var categoriaPadre = categoriaPrincipal is not null && categoriaPrincipal.cat_parent_id is null
+            ? categoriaPrincipal
+            : categorias.FirstOrDefault(x => x.cat_parent_id is null);
+        var categoriaHija = categoriaPrincipal is not null && categoriaPrincipal.cat_parent_id is not null
+            ? categoriaPrincipal
+            : categorias.FirstOrDefault(x => x.cat_parent_id is not null);
         var tipo = categoriaPadre ?? categoriaHija?.Parent ?? categoriaHija;
         var subtipo = categorias.FirstOrDefault(x => tipo is not null && x.cat_parent_id == tipo.cat_id) ?? categoriaHija;
         var horariosDisponibles = atraccion.Horarios.Where(IsHorarioDisponible).OrderBy(x => x.hor_fecha).ThenBy(x => x.hor_hora_inicio).ToList();
