@@ -268,7 +268,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
                     .ToList(),
                 incluye = atraccion.AtraccionIncluyes.Where(x => x.ai_estado == "A" && x.Incluye != null && x.Incluye.inc_estado == "A" && x.Incluye.inc_tipo == "INCLUYE").Select(x => x.Incluye!.inc_descripcion).ToList(),
                 no_incluye = atraccion.AtraccionIncluyes.Where(x => x.ai_estado == "A" && x.Incluye != null && x.Incluye.inc_estado == "A" && x.Incluye.inc_tipo != "INCLUYE").Select(x => x.Incluye!.inc_descripcion).ToList(),
-                punto_encuentro = atraccion.at_punto_encuentro,
+                punto_encuentro = NonBlank(atraccion.at_punto_encuentro, NonBlank(atraccion.at_direccion, "Por confirmar")),
                 incluye_transporte = atraccion.at_incluye_transporte,
                 incluye_acompaniante = atraccion.at_incluye_acompaniante,
                 tickets,
@@ -329,7 +329,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
         _db.Atracciones
             .AsNoTracking()
             .Include(x => x.Destino)
-            .Include(x => x.CategoriaAtracciones).ThenInclude(x => x.Categoria)
+            .Include(x => x.CategoriaAtracciones).ThenInclude(x => x.Categoria).ThenInclude(x => x!.Parent)
             .Include(x => x.IdiomaAtracciones).ThenInclude(x => x.Idioma)
             .Include(x => x.ImagenAtracciones).ThenInclude(x => x.Imagen)
             .Include(x => x.AtraccionIncluyes).ThenInclude(x => x.Incluye)
@@ -433,8 +433,10 @@ public sealed class AtraccionesV2Controller : ControllerBase
     private static dynamic BuildListItem(AtraccionEntity atraccion)
     {
         var categorias = atraccion.CategoriaAtracciones.Where(x => x.ca_estado == "A" && x.Categoria != null && x.Categoria.cat_estado == "A").Select(x => x.Categoria!).ToList();
-        var tipo = categorias.FirstOrDefault(x => x.cat_parent_id is null) ?? categorias.FirstOrDefault();
-        var subtipo = categorias.FirstOrDefault(x => tipo is not null && x.cat_parent_id == tipo.cat_id);
+        var categoriaPadre = categorias.FirstOrDefault(x => x.cat_parent_id is null);
+        var categoriaHija = categorias.FirstOrDefault(x => x.cat_parent_id is not null);
+        var tipo = categoriaPadre ?? categoriaHija?.Parent ?? categoriaHija;
+        var subtipo = categorias.FirstOrDefault(x => tipo is not null && x.cat_parent_id == tipo.cat_id) ?? categoriaHija;
         var horariosDisponibles = atraccion.Horarios.Where(IsHorarioDisponible).OrderBy(x => x.hor_fecha).ThenBy(x => x.hor_hora_inicio).ToList();
         var imagenPrincipal = atraccion.ImagenAtracciones
             .Where(x => x.ima_estado == "A" && x.Imagen != null && x.Imagen.img_estado == "A")
@@ -452,10 +454,10 @@ public sealed class AtraccionesV2Controller : ControllerBase
             nombre = atraccion.at_nombre,
             ciudad = atraccion.Destino?.des_nombre,
             pais = atraccion.Destino?.des_pais,
-            tipo_tagname = tipo?.cat_tagname,
-            tipo_nombre = tipo?.cat_nombre,
-            subtipo_tagname = subtipo?.cat_tagname,
-            subtipo_nombre = subtipo?.cat_nombre,
+            tipo_tagname = NonBlank(tipo?.cat_tagname, "general"),
+            tipo_nombre = NonBlank(tipo?.cat_nombre, "General"),
+            subtipo_tagname = NonBlank(subtipo?.cat_tagname, "general"),
+            subtipo_nombre = NonBlank(subtipo?.cat_nombre, "General"),
             etiquetas,
             descripcion_corta = ShortDescription(atraccion.at_descripcion),
             imagen_principal = imagenPrincipal,
@@ -502,6 +504,9 @@ public sealed class AtraccionesV2Controller : ControllerBase
     private static string Slug(string value) => value.Trim().ToLowerInvariant().Replace(' ', '-');
 
     private static string? FormatTime(TimeOnly? time) => time?.ToString("HH:mm");
+
+    private static string NonBlank(string? value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value;
 
     private static string? NormalizeImageUrl(string? value)
     {
