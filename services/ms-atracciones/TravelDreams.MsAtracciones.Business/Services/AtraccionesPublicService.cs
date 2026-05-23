@@ -32,9 +32,9 @@ public sealed class AtraccionesPublicService : IAtraccionesPublicService
         return tickets.Select(Map).ToList();
     }
 
-    public async Task<IReadOnlyList<HorarioResponse>> ListarHorariosPorAtraccionAsync(Guid atraccionGuid, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<HorarioResponse>> ListarHorariosPorAtraccionAsync(Guid atraccionGuid, DateOnly? fecha = null, CancellationToken cancellationToken = default)
     {
-        var horarios = await _data.ListarHorariosPorAtraccionAsync(atraccionGuid, cancellationToken);
+        var horarios = await _data.ListarHorariosPorAtraccionAsync(atraccionGuid, fecha, cancellationToken);
         return horarios.Select(Map).ToList();
     }
 

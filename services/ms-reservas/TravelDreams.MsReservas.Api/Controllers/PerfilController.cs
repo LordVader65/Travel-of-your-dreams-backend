@@ -30,13 +30,16 @@ public sealed class PerfilController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Actualizar([FromQuery] Guid clienteGuid, ClienteRequest request, CancellationToken ct)
     {
+        Guid? usuarioGuidActual = null;
         if (clienteGuid == Guid.Empty && TryGetUserGuid(out var usuarioGuid))
         {
+            usuarioGuidActual = usuarioGuid;
             var current = await _clientes.ObtenerPorUsuarioGuidAsync(usuarioGuid, ct);
             clienteGuid = current?.Guid ?? Guid.Empty;
         }
 
         request.ClienteGuid = clienteGuid;
+        request.UsuarioGuid ??= usuarioGuidActual;
         var data = await _clientes.GuardarAsync(request, ct);
         return Ok(new { status = StatusCodes.Status200OK, data });
     }

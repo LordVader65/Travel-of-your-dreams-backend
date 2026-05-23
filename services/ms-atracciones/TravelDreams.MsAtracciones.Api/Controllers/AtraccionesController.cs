@@ -56,23 +56,23 @@ public sealed class AtraccionesController : ControllerBase
     }
 
     [HttpGet("{guid:guid}/horarios-disponibles")]
-    public async Task<IActionResult> Horarios(Guid guid, CancellationToken cancellationToken)
+    public async Task<IActionResult> Horarios(Guid guid, [FromQuery] DateOnly? fecha, CancellationToken cancellationToken)
     {
-        var data = await _atracciones.ListarHorariosPorAtraccionAsync(guid, cancellationToken);
+        var data = await _atracciones.ListarHorariosPorAtraccionAsync(guid, fecha, cancellationToken);
         return Ok(new { status = StatusCodes.Status200OK, data });
     }
 
     [HttpGet("{guid:guid}/horarios")]
-    public async Task<IActionResult> HorariosContrato(Guid guid, [FromQuery] bool disponibles = true, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> HorariosContrato(Guid guid, [FromQuery] bool disponibles = true, [FromQuery] DateOnly? fecha = null, CancellationToken cancellationToken = default)
     {
-        var data = await _atracciones.ListarHorariosPorAtraccionAsync(guid, cancellationToken);
+        var data = await _atracciones.ListarHorariosPorAtraccionAsync(guid, fecha, cancellationToken);
         return Ok(new { status = StatusCodes.Status200OK, data });
     }
 
     [HttpGet("{guid:guid}/horarios/{horarioGuid:guid}/tickets")]
     public async Task<IActionResult> TicketsPorHorario(Guid guid, Guid horarioGuid, CancellationToken cancellationToken)
     {
-        var horarios = await _atracciones.ListarHorariosPorAtraccionAsync(guid, cancellationToken);
+        var horarios = await _atracciones.ListarHorariosPorAtraccionAsync(guid, null, cancellationToken);
         var horario = horarios.FirstOrDefault(x => x.Guid == horarioGuid);
         if (horario is null)
         {

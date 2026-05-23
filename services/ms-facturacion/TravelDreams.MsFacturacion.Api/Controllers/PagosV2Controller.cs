@@ -53,7 +53,7 @@ public sealed class PagosV2Controller : ControllerBase
                 rev_codigo = snapshot?.Codigo ?? factura.ReservaGuid.ToString(),
                 total = factura.Total,
                 moneda = factura.Moneda,
-                fecha_emision = factura.FechaEmisionUtc,
+                fecha_emision = TruncateToSeconds(factura.FechaEmisionUtc),
                 estado = factura.Estado,
                 nombre_receptor = request.NombreReceptor,
                 correo_receptor = request.CorreoReceptor
@@ -69,6 +69,9 @@ public sealed class PagosV2Controller : ControllerBase
         timestamp = DateTime.UtcNow,
         path = Request.Path.Value
     };
+
+    private static DateTime TruncateToSeconds(DateTime value) =>
+        value.AddTicks(-(value.Ticks % TimeSpan.TicksPerSecond));
 }
 
 public sealed class ConfirmarPagoV2Request

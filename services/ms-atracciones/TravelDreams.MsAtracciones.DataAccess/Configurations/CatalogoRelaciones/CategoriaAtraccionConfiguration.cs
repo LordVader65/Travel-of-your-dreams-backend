@@ -15,6 +15,8 @@ public sealed class CategoriaAtraccionConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.ca_usuario_ingreso).HasMaxLength(100).IsRequired();
         builder.Property(x => x.ca_usuario_eliminacion).HasMaxLength(100);
         builder.Property(x => x.ca_estado).HasMaxLength(1).IsFixedLength().HasDefaultValue(DatabaseConstants.EstadoActivo);
+        builder.Property(x => x.ca_es_principal).HasDefaultValue(false);
+        builder.HasIndex(x => new { x.at_id, x.ca_es_principal });
         builder.HasOne(x => x.Categoria).WithMany(x => x.CategoriaAtracciones).HasForeignKey(x => x.cat_id);
         builder.HasOne(x => x.Atraccion).WithMany(x => x.CategoriaAtracciones).HasForeignKey(x => x.at_id);
     }
