@@ -40,14 +40,25 @@ public sealed class ApiExceptionMiddleware
 
         context.Response.StatusCode = status;
         context.Response.ContentType = "application/json";
+        var message = GetClientMessage(ex);
         await context.Response.WriteAsync(JsonSerializer.Serialize(new
         {
             status,
-            error = status == StatusCodes.Status500InternalServerError ? "Error interno del servidor." : ex.Message,
-            details = status == StatusCodes.Status500InternalServerError ? [] : new[] { ex.Message },
+            error = status == StatusCodes.Status500InternalServerError ? "Error interno del servidor." : message,
+            details = status == StatusCodes.Status500InternalServerError ? [] : new[] { message },
             timestamp = DateTime.UtcNow,
             path = context.Request.Path.Value
         }));
+    }
+
+    private static string GetClientMessage(Exception ex)
+    {
+        if (ex is RpcException rpc && !string.IsNullOrWhiteSpace(rpc.Status.Detail))
+        {
+            return rpc.Status.Detail;
+        }
+
+        return ex.Message;
     }
 
     private static int ResolveStatusCode(Exception ex)

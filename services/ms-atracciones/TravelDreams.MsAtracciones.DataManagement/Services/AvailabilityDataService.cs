@@ -64,7 +64,7 @@ public sealed class AvailabilityDataService : IAvailabilityDataService
         var cantidadTotal = lines.Sum(x => x.Cantidad);
         if (horario.hor_cupos_disponibles < cantidadTotal)
         {
-            return Failure($"Cupos insuficientes. Disponibles: {horario.hor_cupos_disponibles}, solicitados: {cantidadTotal}.");
+            return Failure($"El maximo permitido para este horario es {horario.hor_cupos_disponibles} ticket(s).");
         }
 
         horario.hor_cupos_disponibles -= cantidadTotal;
