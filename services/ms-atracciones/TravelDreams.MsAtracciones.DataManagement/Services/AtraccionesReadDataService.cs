@@ -73,11 +73,15 @@ public sealed class AtraccionesReadDataService : IAtraccionesReadDataService
 
     public async Task<IReadOnlyList<HorarioPublicoDataModel>> ListarHorariosPorAtraccionAsync(Guid atraccionGuid, DateOnly? fecha = null, CancellationToken cancellationToken = default)
     {
+        var now = EcuadorNow();
+        var today = DateOnly.FromDateTime(now);
+        var currentTime = TimeOnly.FromDateTime(now);
+
         var query = _db.Horarios
             .AsNoTracking()
             .Where(x => x.hor_estado == "A"
                 && x.hor_cupos_disponibles > 0
-                && x.hor_fecha >= DateOnly.FromDateTime(DateTime.UtcNow)
+                && (x.hor_fecha > today || x.hor_fecha == today && x.hor_hora_inicio > currentTime)
                 && x.Atraccion != null
                 && x.Atraccion.at_guid == atraccionGuid
                 && x.Atraccion.at_estado == "A"
@@ -114,5 +118,17 @@ public sealed class AtraccionesReadDataService : IAtraccionesReadDataService
         return atraccionGuid == Guid.Empty
             ? []
             : await ListarHorariosPorAtraccionAsync(atraccionGuid, null, cancellationToken);
+    }
+
+    private static DateTime EcuadorNow()
+    {
+        try
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("America/Guayaquil"));
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time"));
+        }
     }
 }

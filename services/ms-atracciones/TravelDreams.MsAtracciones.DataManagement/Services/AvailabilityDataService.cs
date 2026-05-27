@@ -32,7 +32,7 @@ public sealed class AvailabilityDataService : IAvailabilityDataService
             return Failure("Horario activo no encontrado.");
         }
 
-        if (horario.hor_fecha < DateOnly.FromDateTime(DateTime.UtcNow))
+        if (!IsHorarioReservable(horario.hor_fecha, horario.hor_hora_inicio))
         {
             return Failure("El horario ya no esta vigente.");
         }
@@ -121,4 +121,25 @@ public sealed class AvailabilityDataService : IAvailabilityDataService
         Success = false,
         Error = error
     };
+
+    private static bool IsHorarioReservable(DateOnly fecha, TimeOnly horaInicio)
+    {
+        var now = EcuadorNow();
+        var today = DateOnly.FromDateTime(now);
+        var currentTime = TimeOnly.FromDateTime(now);
+
+        return fecha > today || fecha == today && horaInicio > currentTime;
+    }
+
+    private static DateTime EcuadorNow()
+    {
+        try
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("America/Guayaquil"));
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time"));
+        }
+    }
 }
