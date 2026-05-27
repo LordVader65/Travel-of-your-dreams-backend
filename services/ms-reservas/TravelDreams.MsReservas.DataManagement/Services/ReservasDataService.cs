@@ -149,11 +149,25 @@ public sealed class ReservasDataService : IReservasDataService
         {
             var cantidad = reserva.Detalles.Sum(x => x.rdet_cantidad);
             await releaseAvailability(reserva.hor_guid, cantidad, ct);
-            reserva.rev_estado = DatabaseConstants.ReservaExpirada;
+            var isBooking = string.Equals(reserva.rev_origen_canal, "BOOKING", StringComparison.OrdinalIgnoreCase);
+            var nuevoEstado = isBooking ? DatabaseConstants.ReservaCancelada : DatabaseConstants.ReservaExpirada;
+            var observacion = isBooking
+                ? "Reserva Booking cancelada automaticamente por expiracion"
+                : "Reserva expirada";
+
+            reserva.rev_estado = nuevoEstado;
             reserva.rev_fecha_mod = DateTime.UtcNow;
             reserva.rev_usuario_mod = usuario;
             reserva.rev_ip_mod = ip;
-            _db.ReservaEstadoHistorial.Add(new ReservaEstadoHistorialEntity { rev_id = reserva.rev_id, reh_estado_anterior = DatabaseConstants.ReservaPendiente, reh_estado_nuevo = DatabaseConstants.ReservaExpirada, reh_usuario = usuario, reh_ip = ip, reh_observacion = "Reserva expirada" });
+            if (isBooking)
+            {
+                reserva.rev_fecha_cancelacion = DateTime.UtcNow;
+                reserva.rev_usuario_cancelacion = usuario;
+                reserva.rev_ip_cancelacion = ip;
+                reserva.rev_motivo_cancelacion = observacion;
+            }
+
+            _db.ReservaEstadoHistorial.Add(new ReservaEstadoHistorialEntity { rev_id = reserva.rev_id, reh_estado_anterior = DatabaseConstants.ReservaPendiente, reh_estado_nuevo = nuevoEstado, reh_usuario = usuario, reh_ip = ip, reh_observacion = observacion });
         }
 
         await _db.SaveChangesAsync(ct);

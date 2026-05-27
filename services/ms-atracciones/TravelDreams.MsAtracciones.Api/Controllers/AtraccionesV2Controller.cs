@@ -299,8 +299,16 @@ public sealed class AtraccionesV2Controller : ControllerBase
         var exists = await _db.Atracciones.AnyAsync(x => x.at_guid == guid && x.at_estado == "A", ct);
         if (!exists) return NotFound(new { status = 404, error = "Atraccion no encontrada." });
 
+        var now = EcuadorNow();
+        var today = DateOnly.FromDateTime(now);
+        var currentTime = TimeOnly.FromDateTime(now);
+
         var data = await _db.Horarios.AsNoTracking()
-            .Where(x => x.hor_estado == "A" && x.hor_cupos_disponibles > 0 && x.hor_fecha >= DateOnly.FromDateTime(DateTime.UtcNow) && x.Atraccion != null && x.Atraccion.at_guid == guid)
+            .Where(x => x.hor_estado == "A"
+                && x.hor_cupos_disponibles > 0
+                && (x.hor_fecha > today || x.hor_fecha == today && x.hor_hora_inicio > currentTime)
+                && x.Atraccion != null
+                && x.Atraccion.at_guid == guid)
             .OrderBy(x => x.hor_fecha)
             .ThenBy(x => x.hor_hora_inicio)
             .Select(x => new { hor_guid = x.hor_guid, fecha = x.hor_fecha, hora_inicio = FormatTime(x.hor_hora_inicio), hora_fin = FormatTime(x.hor_hora_fin), cupos = x.hor_cupos_disponibles })
@@ -312,8 +320,18 @@ public sealed class AtraccionesV2Controller : ControllerBase
     [HttpGet("{guid:guid}/horarios/{horarioGuid:guid}/tickets")]
     public async Task<IActionResult> TicketsPorHorario(Guid guid, Guid horarioGuid, CancellationToken ct)
     {
+        var now = EcuadorNow();
+        var today = DateOnly.FromDateTime(now);
+        var currentTime = TimeOnly.FromDateTime(now);
+
         var horario = await _db.Horarios.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.hor_guid == horarioGuid && x.hor_estado == "A" && x.hor_cupos_disponibles > 0 && x.Atraccion != null && x.Atraccion.at_guid == guid && x.Atraccion.at_estado == "A", ct);
+            .FirstOrDefaultAsync(x => x.hor_guid == horarioGuid
+                && x.hor_estado == "A"
+                && x.hor_cupos_disponibles > 0
+                && (x.hor_fecha > today || x.hor_fecha == today && x.hor_hora_inicio > currentTime)
+                && x.Atraccion != null
+                && x.Atraccion.at_guid == guid
+                && x.Atraccion.at_estado == "A", ct);
         if (horario is null) return NotFound(new { status = 404, error = "Atraccion o horario no encontrado." });
 
         var items = await _db.Tickets.AsNoTracking()
@@ -373,7 +391,13 @@ public sealed class AtraccionesV2Controller : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(horario) && TryParseRange(horario, out var start, out var end))
         {
-            query = query.Where(x => x.Horarios.Any(h => h.hor_estado == "A" && h.hor_cupos_disponibles > 0 && (start <= end
+            var now = EcuadorNow();
+            var today = DateOnly.FromDateTime(now);
+            var currentTime = TimeOnly.FromDateTime(now);
+            query = query.Where(x => x.Horarios.Any(h => h.hor_estado == "A"
+                && h.hor_cupos_disponibles > 0
+                && (h.hor_fecha > today || h.hor_fecha == today && h.hor_hora_inicio > currentTime)
+                && (start <= end
                 ? h.hor_hora_inicio >= start && h.hor_hora_inicio < end
                 : h.hor_hora_inicio >= start || h.hor_hora_inicio < end)));
         }
@@ -480,7 +504,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
             disponibilidad = new
             {
                 disponible = atraccion.at_disponible && horariosDisponibles.Count > 0,
-                disponible_hoy = horariosDisponibles.Any(x => x.hor_fecha == DateOnly.FromDateTime(DateTime.UtcNow)),
+                disponible_hoy = horariosDisponibles.Any(x => x.hor_fecha == DateOnly.FromDateTime(EcuadorNow())),
                 proxima_fecha_disponible = horariosDisponibles.FirstOrDefault()?.hor_fecha,
                 cupos_disponibles = horariosDisponibles.Sum(x => x.hor_cupos_disponibles)
             },
@@ -491,7 +515,7 @@ public sealed class AtraccionesV2Controller : ControllerBase
     private static bool IsHorarioDisponible(TravelDreams.MsAtracciones.DataAccess.Entities.Operacion.HorarioEntity horario) =>
         horario.hor_estado == "A"
         && horario.hor_cupos_disponibles > 0
-        && horario.hor_fecha >= DateOnly.FromDateTime(DateTime.UtcNow);
+        && IsHorarioFuturo(horario.hor_fecha, horario.hor_hora_inicio);
 
     private static int CountByTime(IEnumerable<AtraccionEntity> atracciones, TimeOnly start, TimeOnly end) =>
         atracciones.Count(a => a.Horarios.Any(h => IsHorarioDisponible(h) && (start <= end
@@ -552,4 +576,25 @@ public sealed class AtraccionesV2Controller : ControllerBase
         timestamp = DateTime.UtcNow,
         path = string.Empty
     };
+
+    private static bool IsHorarioFuturo(DateOnly fecha, TimeOnly horaInicio)
+    {
+        var now = EcuadorNow();
+        var today = DateOnly.FromDateTime(now);
+        var currentTime = TimeOnly.FromDateTime(now);
+
+        return fecha > today || fecha == today && horaInicio > currentTime;
+    }
+
+    private static DateTime EcuadorNow()
+    {
+        try
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("America/Guayaquil"));
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time"));
+        }
+    }
 }

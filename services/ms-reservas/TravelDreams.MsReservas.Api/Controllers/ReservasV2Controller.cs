@@ -9,6 +9,7 @@ namespace TravelDreams.MsReservas.Api.Controllers;
 [Route("api/v2/reservas")]
 public sealed class ReservasV2Controller : ControllerBase
 {
+    private const int BookingExpirationMinutes = 30;
     private readonly IReservasService _reservas;
 
     public ReservasV2Controller(IReservasService reservas)
@@ -36,7 +37,7 @@ public sealed class ReservasV2Controller : ControllerBase
             HorarioGuid = request.HorGuid,
             OrigenCanal = "BOOKING",
             PorcentajeIva = 12,
-            ExpiracionMinutos = 30,
+            ExpiracionMinutos = BookingExpirationMinutes,
             Lineas = request.Lineas.Select(x => new CrearReservaLineaRequest
             {
                 TicketGuid = x.TckGuid,
