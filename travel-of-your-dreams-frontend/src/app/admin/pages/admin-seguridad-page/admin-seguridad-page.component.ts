@@ -10,14 +10,20 @@ import { NotificationService } from '../../../core/notifications/notification.se
   template: `
     <section class="page stack">
       <header class="admin-header">
-        <div>
+        <div class="page-title">
           <h1>Seguridad y auditoria</h1>
           <p class="muted">Usuarios vinculados a personas/clientes, roles y trazabilidad de operaciones.</p>
         </div>
         <button class="btn secondary" type="button" (click)="cargar()">Actualizar</button>
       </header>
 
-      <div class="grid two">
+      <nav class="app-tabs" aria-label="Seguridad">
+        <button class="tab-button" [class.active]="tab() === 'usuarios'" type="button" (click)="tab.set('usuarios')">Usuarios</button>
+        <button class="tab-button" [class.active]="tab() === 'gestion'" type="button" (click)="tab.set('gestion')">Gestion de roles</button>
+        <button class="tab-button" [class.active]="tab() === 'auditoria'" type="button" (click)="tab.set('auditoria')">Auditoria</button>
+      </nav>
+
+      <div class="grid two" [hidden]="tab() !== 'gestion'">
         <form class="panel form-grid" (ngSubmit)="crearUsuario()">
           <h2>Crear usuario</h2>
           <label>Tipo identificacion
@@ -76,7 +82,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
         </form>
       </div>
 
-      <div class="grid two">
+      <div class="grid two" [hidden]="tab() !== 'usuarios'">
         <div class="panel stack">
           <h2>Usuarios</h2>
           <input name="buscarUsuarios" placeholder="Buscar usuario, persona o rol" [(ngModel)]="busquedaUsuarios" />
@@ -109,7 +115,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
         </div>
       </div>
 
-      <form class="panel form-grid" (ngSubmit)="cargarAuditoria()">
+      <form class="panel form-grid" [hidden]="tab() !== 'auditoria'" (ngSubmit)="cargarAuditoria()">
         <h2>Auditoria</h2>
         <label>Tabla
           <select name="tabla" [(ngModel)]="auditoriaFiltro.tabla">
@@ -136,7 +142,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
         <button class="btn" type="submit">Consultar</button>
       </form>
 
-      <div class="panel stack">
+      <div class="panel stack" [hidden]="tab() !== 'auditoria'">
         <h2>Resultados auditoria</h2>
         <input name="buscarAuditoria" placeholder="Buscar auditoria" [(ngModel)]="busquedaAuditoria" />
         @for (item of auditoriaFiltrada(); track item.id || $index) {
@@ -163,6 +169,7 @@ export class AdminSeguridadPageComponent implements OnInit {
   usuarios = signal<any[]>([]);
   seleccionado = signal<any | null>(null);
   auditoria = signal<any[]>([]);
+  tab = signal<'usuarios' | 'gestion' | 'auditoria'>('usuarios');
   mensaje = signal('');
   busquedaUsuarios = '';
   busquedaAuditoria = '';
@@ -177,21 +184,65 @@ export class AdminSeguridadPageComponent implements OnInit {
   }
 
   cargar() {
-    this.api.roles().subscribe((response) => this.roles.set(response.data));
-    this.api.adminUsuarios().subscribe((response) => this.usuarios.set(response.data));
+    this.api.roles().subscribe((response) => this.roles.set(this.itemsFromResponse(response.data)));
+    this.api.adminUsuarios().subscribe((response) => this.usuarios.set(this.itemsFromResponse(response.data)));
     this.cargarAuditoria();
   }
 
   crearUsuario() {
-    const request = { ...this.usuario, login: this.usuario.correo };
-    this.api.crearUsuario(request).subscribe({
-      next: () => {
-        this.mensaje.set('Usuario y persona creados.');
-        this.notifications.success('Usuario y persona creados.');
-        this.usuario = this.nuevoUsuario();
-        this.cargar();
+    if (!this.usuario.correo || !this.usuario.password || !this.usuario.numeroIdentificacion) {
+      this.notifications.error('Correo, password e identificacion son obligatorios.');
+      return;
+    }
+
+    this.api.adminClientes().subscribe({
+      next: (clientesResponse) => {
+        const clientes = this.itemsFromResponse(clientesResponse.data);
+        const duplicado = clientes.find((cliente) =>
+          String(cliente.numeroIdentificacion ?? cliente.numero_identificacion ?? '') === this.usuario.numeroIdentificacion
+        );
+        if (duplicado) {
+          this.notifications.error('Ya existe un cliente con esa identificacion. No se crea login para evitar duplicados.');
+          return;
+        }
+
+        const request = { login: this.usuario.correo, password: this.usuario.password, rolIds: this.usuario.rolIds };
+        this.api.crearUsuario(request).subscribe({
+          next: (usuarioResponse) => {
+            const usuarioGuid = (usuarioResponse.data as any)?.guid;
+            if (!usuarioGuid) {
+              this.notifications.error('El usuario fue creado, pero no se pudo obtener su GUID para vincular el cliente.');
+              this.cargar();
+              return;
+            }
+
+            this.api.adminCrearClienteExterno({
+              usuarioGuid,
+              tipoIdentificacion: this.usuario.tipoIdentificacion,
+              numeroIdentificacion: this.usuario.numeroIdentificacion,
+              nombres: this.usuario.nombres,
+              apellidos: this.usuario.apellidos,
+              razonSocial: this.usuario.razonSocial,
+              correo: this.usuario.correo,
+              telefono: this.usuario.telefono,
+              direccion: this.usuario.direccion
+            }).subscribe({
+              next: () => {
+                this.mensaje.set('Usuario y persona creados.');
+                this.notifications.success('Usuario y persona creados.');
+                this.usuario = this.nuevoUsuario();
+                this.cargar();
+              },
+              error: (error) => {
+                this.notifications.error(this.mensajeError(error, 'El usuario fue creado, pero no se pudo registrar el cliente vinculado.'));
+                this.cargar();
+              }
+            });
+          },
+          error: (error) => this.notifications.error(this.mensajeError(error, 'No se pudo crear el usuario.'))
+        });
       },
-      error: (error) => this.notifications.error(error?.error?.message ?? 'No se pudo crear el usuario.')
+      error: (error) => this.notifications.error(this.mensajeError(error, 'No se pudo validar si el cliente ya existe.'))
     });
   }
 
@@ -228,7 +279,7 @@ export class AdminSeguridadPageComponent implements OnInit {
         this.notifications.success('Estado actualizado.');
         this.cargar();
       },
-      error: (error) => this.notifications.error(error?.error?.message ?? 'No se pudo cambiar el estado.')
+      error: (error) => this.notifications.error(this.mensajeError(error, 'No se pudo cambiar el estado.'))
     });
   }
 
@@ -249,7 +300,7 @@ export class AdminSeguridadPageComponent implements OnInit {
         this.notifications.success('Roles actualizados.');
         this.cargar();
       },
-      error: (error) => this.notifications.error(error?.error?.message ?? 'No se pudieron actualizar los roles.')
+      error: (error) => this.notifications.error(this.mensajeError(error, 'No se pudieron actualizar los roles.'))
     });
   }
 
@@ -259,7 +310,7 @@ export class AdminSeguridadPageComponent implements OnInit {
       desdeUtc: this.toUtcQuery(this.auditoriaFiltro.desdeUtc),
       hastaUtc: this.toUtcQuery(this.auditoriaFiltro.hastaUtc)
     };
-    this.api.auditoria(filtro).subscribe((response) => this.auditoria.set(response.data));
+    this.api.auditoria(filtro).subscribe((response) => this.auditoria.set(this.itemsFromResponse(response.data)));
   }
 
   rolesActivos() {
@@ -304,12 +355,19 @@ export class AdminSeguridadPageComponent implements OnInit {
 
   usuariosFiltrados() {
     const q = this.busquedaUsuarios.toLowerCase();
-    return this.usuarios().filter((usuario) => !q || `${this.etiquetaUsuario(usuario)} ${usuario.login} ${this.rolesTexto(usuario)} ${usuario.estado}`.toLowerCase().includes(q));
+    return this.itemsFromResponse(this.usuarios()).filter((usuario) => !q || `${this.etiquetaUsuario(usuario)} ${usuario.login} ${this.rolesTexto(usuario)} ${usuario.estado}`.toLowerCase().includes(q));
   }
 
   auditoriaFiltrada() {
     const q = this.busquedaAuditoria.toLowerCase();
-    return this.auditoria().filter((item) => !q || `${item.tabla || item.aud_tabla} ${item.operacion || item.aud_operacion} ${item.usuario || item.aud_usuario}`.toLowerCase().includes(q));
+    return this.itemsFromResponse(this.auditoria()).filter((item) => !q || `${item.tabla || item.aud_tabla} ${item.operacion || item.aud_operacion} ${item.usuario || item.aud_usuario}`.toLowerCase().includes(q));
+  }
+
+  private itemsFromResponse(value: any): any[] {
+    if (Array.isArray(value)) return value;
+    if (Array.isArray(value?.items)) return value.items;
+    if (Array.isArray(value?.data)) return value.data;
+    return [];
   }
 
   private prepararRolesGestion(usuario: any) {
@@ -326,6 +384,17 @@ export class AdminSeguridadPageComponent implements OnInit {
 
   private toUtcQuery(value: string) {
     return value ? new Date(value).toISOString() : '';
+  }
+
+  private mensajeError(error: any, fallback: string) {
+    const body = error?.error;
+    if (typeof body === 'string' && body.trim()) return body;
+    if (Array.isArray(body?.details) && body.details.length) return body.details.filter(Boolean).join(' ');
+    if (typeof body?.error === 'string' && body.error.trim()) return body.error;
+    if (typeof body?.message === 'string' && body.message.trim()) return body.message;
+    if (typeof body?.title === 'string' && body.title.trim()) return body.title;
+    if (typeof error?.message === 'string' && error.message.trim()) return error.message;
+    return fallback;
   }
 
   private nuevoUsuario() {

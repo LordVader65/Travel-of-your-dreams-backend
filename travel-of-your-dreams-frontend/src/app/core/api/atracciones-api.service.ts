@@ -27,7 +27,15 @@ export class AtraccionesApiService {
     return this.api.resenias();
   }
 
+  reseniasAtraccion(atraccionGuid: string) {
+    return this.api.reseniasAtraccion(atraccionGuid);
+  }
+
   crearResenia(request: unknown) {
     return this.api.crearResenia(request);
+  }
+
+  crearReseniaAtraccion(atraccionGuid: string, request: unknown) {
+    return this.api.crearReseniaAtraccion(atraccionGuid, request);
   }
 }

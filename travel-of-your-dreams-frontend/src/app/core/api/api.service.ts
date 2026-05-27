@@ -13,6 +13,7 @@ const sessionKey = 'toyd_session';
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly baseUrl = environment.apiBaseUrl;
+  private readonly bookingBaseUrl = environment.bookingApiBaseUrl;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -48,10 +49,24 @@ export class ApiService {
     });
   }
 
+  listarAtraccionesPublicas(params: Record<string, QueryValue> = {}) {
+    return this.http.get<ApiListResponse<unknown>>(`${this.bookingBaseUrl}/atracciones`, {
+      params: this.toParams(params)
+    });
+  }
+
+  obtenerAtraccionPublica(guid: string) {
+    return this.http.get<ApiResponse<unknown>>(`${this.bookingBaseUrl}/atracciones/${guid}`);
+  }
+
   listarHorarios(atraccionGuid: string, fecha?: string) {
     return this.http.get<ApiResponse<HorarioDisponible[]>>(`${this.baseUrl}/atracciones/${atraccionGuid}/horarios`, {
       params: this.toParams({ fecha })
     });
+  }
+
+  listarTickets(atraccionGuid: string) {
+    return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/atracciones/${atraccionGuid}/tickets`);
   }
 
   previsualizarReserva(request: CrearReservaRequest) {
@@ -75,7 +90,7 @@ export class ApiService {
   }
 
   cancelarReserva(guid: string, motivo: string) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/reservas/${guid}/cancelar`, this.toRequestBody({ motivo }));
+    return this.http.put<ApiResponse<unknown>>(`${this.baseUrl}/reservas/${guid}/cancelar`, this.toRequestBody({ motivo }));
   }
 
   miPerfil() {
@@ -97,10 +112,12 @@ export class ApiService {
   }
 
   crearDatosFacturacion(request: unknown) {
-    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/me/datos-facturacion`, this.toRequestBody({
-      clienteGuid: this.currentClienteGuid(),
+    const clienteGuid = this.currentClienteGuid();
+    const body = {
+      ...(clienteGuid ? { clienteGuid } : {}),
       ...(request as Record<string, unknown>)
-    }));
+    };
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/me/datos-facturacion`, this.toRequestBody(body));
   }
 
   actualizarDatosFacturacion(guid: string, request: unknown) {
@@ -135,8 +152,16 @@ export class ApiService {
     return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/resenias`);
   }
 
+  reseniasAtraccion(atraccionGuid: string) {
+    return this.http.get<ApiResponse<unknown[]>>(`${this.baseUrl}/atracciones/${atraccionGuid}/resenias`);
+  }
+
   crearResenia(request: unknown) {
     return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/resenias`, this.toRequestBody(request));
+  }
+
+  crearReseniaAtraccion(atraccionGuid: string, request: unknown) {
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/atracciones/${atraccionGuid}/resenias`, this.toRequestBody(request));
   }
 
   adminClientes() {
@@ -199,36 +224,44 @@ export class ApiService {
     return this.http.delete(`${this.baseUrl}/admin/atracciones/${guid}`);
   }
 
-  asociarCategoriaAtraccion(atraccionId: number, categoriaId: number) {
-    return this.operacionNoImplementada('La asociacion directa de categorias se administra desde el backend al guardar la atraccion.');
+  obtenerCaracteristicasAtraccion(atraccionId: number) {
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/caracteristicas`);
+  }
+
+  asociarCategoriaAtraccion(atraccionId: number, categoriaId: number, esPrincipal = false) {
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/categorias/${categoriaId}`, {}, {
+      params: this.toParams({ esPrincipal })
+    });
   }
 
   desasociarCategoriaAtraccion(atraccionId: number, categoriaId: number) {
-    return this.operacionNoImplementada('La desasociacion directa de categorias no esta disponible en microservicios.');
+    return this.http.delete(`${this.baseUrl}/admin/atracciones/${atraccionId}/categorias/${categoriaId}`);
   }
 
   asociarIdiomaAtraccion(atraccionId: number, idiomaId: number) {
-    return this.operacionNoImplementada('La asociacion directa de idiomas se administra desde el backend al guardar la atraccion.');
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/idiomas/${idiomaId}`, {});
   }
 
   desasociarIdiomaAtraccion(atraccionId: number, idiomaId: number) {
-    return this.operacionNoImplementada('La desasociacion directa de idiomas no esta disponible en microservicios.');
+    return this.http.delete(`${this.baseUrl}/admin/atracciones/${atraccionId}/idiomas/${idiomaId}`);
   }
 
   asociarImagenAtraccion(atraccionId: number, imagenId: number, esPrincipal = false, orden = 1) {
-    return this.operacionNoImplementada('La asociacion directa de imagenes se administra desde el backend al guardar la atraccion.');
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/imagenes/${imagenId}`, {}, {
+      params: this.toParams({ esPrincipal, orden })
+    });
   }
 
   desasociarImagenAtraccion(atraccionId: number, imagenId: number) {
-    return this.operacionNoImplementada('La desasociacion directa de imagenes no esta disponible en microservicios.');
+    return this.http.delete(`${this.baseUrl}/admin/atracciones/${atraccionId}/imagenes/${imagenId}`);
   }
 
   asociarIncluyeAtraccion(atraccionId: number, incluyeId: number) {
-    return this.operacionNoImplementada('La asociacion directa de incluye/no incluye se administra desde el backend al guardar la atraccion.');
+    return this.http.post<ApiResponse<unknown>>(`${this.baseUrl}/admin/atracciones/${atraccionId}/incluye/${incluyeId}`, {});
   }
 
   desasociarIncluyeAtraccion(atraccionId: number, incluyeId: number) {
-    return this.operacionNoImplementada('La desasociacion directa de incluye/no incluye no esta disponible en microservicios.');
+    return this.http.delete(`${this.baseUrl}/admin/atracciones/${atraccionId}/incluye/${incluyeId}`);
   }
 
   catalogo(nombre: 'destinos' | 'categorias' | 'idiomas' | 'imagenes' | 'incluye') {
@@ -264,7 +297,7 @@ export class ApiService {
   }
 
   desactivarHorariosVencidos() {
-    return of({ status: 200, data: { total: 0 } } as ApiResponse<{ total: number }>);
+    return this.http.post<ApiResponse<{ total: number }>>(`${this.baseUrl}/admin/horarios/desactivar-vencidos`, {});
   }
 
   adminTickets() {
@@ -297,8 +330,16 @@ export class ApiService {
     return this.http.get<ApiListResponse<unknown>>(`${this.baseUrl}/admin/pagos`, { params: this.toParams(params) });
   }
 
+  adminPago(guid: string) {
+    return this.http.get<ApiResponse<unknown>>(`${this.baseUrl}/admin/pagos/${guid}`);
+  }
+
   adminFacturas(params: Record<string, QueryValue> = {}) {
     return this.http.get<ApiListResponse<unknown>>(`${this.baseUrl}/admin/facturas`, { params: this.toParams(params) });
+  }
+
+  adminFactura(guid: string) {
+    return this.http.get<ApiResponse<unknown>>(`${this.baseUrl}/admin/facturas/${guid}`);
   }
 
   generarFactura(request: unknown) {

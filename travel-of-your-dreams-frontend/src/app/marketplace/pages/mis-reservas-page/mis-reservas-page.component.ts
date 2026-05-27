@@ -18,10 +18,17 @@ import { Reserva } from '../../../shared/models/reserva.model';
         <button class="btn secondary" type="button" (click)="cargar()">Actualizar</button>
       </header>
 
-      <div class="grid two">
+      <nav class="app-tabs activity-tabs" aria-label="Actividad del cliente">
+        <button class="tab-button" [class.active]="actividad() === 'reservas'" type="button" (click)="actividad.set('reservas')">Mis reservas</button>
+        <button class="tab-button" [class.active]="actividad() === 'facturas'" type="button" (click)="actividad.set('facturas')">Mis facturas</button>
+        <button class="tab-button" [class.active]="actividad() === 'pagos'" type="button" (click)="actividad.set('pagos')">Pagos realizados</button>
+      </nav>
+
+      @if (actividad() === 'reservas') {
+      <div class="activity-layout">
         <div class="panel stack">
           @for (reserva of reservas(); track reserva.guid) {
-            <article class="compact-row">
+            <article class="compact-row activity-item">
               <span>
                 <strong>{{ reserva.codigo }}</strong>
                 <small>{{ reserva.estado }} · {{ reserva.total }} {{ reserva.moneda }}</small>
@@ -88,9 +95,64 @@ import { Reserva } from '../../../shared/models/reserva.model';
             <label>Telefono <input name="factTelefono" maxlength="10" inputmode="numeric" pattern="[0-9]*" [(ngModel)]="facturacionForm.telefono" [disabled]="!!pago.datosFacturacionGuid" (input)="soloNumerosTelefono()" /></label>
             <label class="wide">Direccion <input name="factDireccion" maxlength="300" [(ngModel)]="facturacionForm.direccion" [disabled]="!!pago.datosFacturacionGuid" /></label>
           </div>
+          <div class="wide card-form">
+            <div class="card-brand-row">
+              <span class="card-brand">{{ marcaTarjeta() }}</span>
+            </div>
+            <label class="wide">Titular
+              <input name="cardTitular" maxlength="100" autocomplete="off" [(ngModel)]="tarjeta.titular" />
+            </label>
+            <label class="wide">Numero de tarjeta
+              <input name="cardNumero" maxlength="19" inputmode="numeric" autocomplete="off" placeholder="4111 1111 1111 1111" [(ngModel)]="tarjeta.numero" (input)="formatearTarjeta()" />
+            </label>
+            <label>Expira
+              <input name="cardExpira" maxlength="5" inputmode="numeric" autocomplete="off" placeholder="MM/AA" [(ngModel)]="tarjeta.expira" (input)="formatearExpiracion()" />
+            </label>
+            <label>CVV
+              <input name="cardCvv" maxlength="4" inputmode="numeric" autocomplete="off" type="password" [(ngModel)]="tarjeta.cvv" (input)="soloNumerosCvv()" />
+            </label>
+          </div>
           <button class="btn wide" type="submit" [disabled]="!pago.reservaGuid">Confirmar pago</button>
         </form>
       </div>
+      }
+
+      @if (actividad() === 'facturas') {
+        <div class="panel stack activity-panel">
+          <h2>Mis facturas</h2>
+          @for (item of facturas(); track item.guid || item.id || $index) {
+            <div class="compact-row activity-item">
+              <span>
+                <strong>{{ item.numero || item.guid }}</strong>
+                <small>{{ item.estado }} · {{ formatearFecha(item.fecha_emision || item.fechaEmision) }}</small>
+              </span>
+              <span class="actions">
+                <strong>{{ item.total }} {{ item.moneda || 'USD' }}</strong>
+                <button class="btn secondary" type="button" (click)="verFactura(item.guid)">Ver</button>
+              </span>
+            </div>
+          } @empty {
+            <p class="muted">Aun no tienes facturas registradas.</p>
+          }
+        </div>
+      }
+
+      @if (actividad() === 'pagos') {
+        <div class="panel stack activity-panel">
+          <h2>Pagos realizados</h2>
+          @for (item of pagos(); track item.guid || item.id || $index) {
+            <div class="compact-row activity-item">
+              <span>
+                <strong>{{ item.referencia || 'Pago registrado' }}</strong>
+                <small>{{ item.metodo }} · {{ item.estado }} · {{ formatearFecha(item.fecha_utc || item.fechaUtc) }}</small>
+              </span>
+              <strong>{{ item.monto }} {{ item.moneda || 'USD' }}</strong>
+            </div>
+          } @empty {
+            <p class="muted">Aun no tienes pagos registrados.</p>
+          }
+        </div>
+      }
 
       @if (detalle()) {
         <div class="panel stack" [class.invoice-doc]="esFactura(detalle())">
@@ -108,8 +170,8 @@ import { Reserva } from '../../../shared/models/reserva.model';
               <div class="invoice-seal">TOYD</div>
               <div class="invoice-meta">
                 <span><strong>N. de factura:</strong> {{ detalle().numero || '-' }}</span>
-                <span><strong>Fecha:</strong> {{ formatearFecha(detalle().fecha_emision || detalle().fechaEmision) }}</span>
-                <span><strong>Reserva:</strong> {{ detalle().reserva?.codigo || '-' }}</span>
+                <span><strong>Fecha:</strong> {{ formatearFecha(fechaFactura(detalle())) }}</span>
+                <span><strong>Reserva:</strong> {{ reservaFactura(detalle())?.codigo || '-' }}</span>
               </div>
             </div>
           }
@@ -118,9 +180,12 @@ import { Reserva } from '../../../shared/models/reserva.model';
               <h2>{{ detalle().codigo || detalle().numero || 'Detalle' }}</h2>
               <p class="muted">{{ detalle().estado }} - {{ detalle().total }} {{ detalle().moneda }}</p>
             </div>
-            @if (esFactura(detalle())) {
-              <button class="btn secondary print-hide" type="button" (click)="imprimir()">Imprimir</button>
-            }
+            <span class="actions print-hide">
+              @if (esFactura(detalle())) {
+                <button class="btn secondary" type="button" (click)="imprimir()">Imprimir</button>
+              }
+              <button class="btn secondary" type="button" (click)="cerrarDetalle()">Cerrar</button>
+            </span>
           </header>
           <div class="info-grid">
             @for (item of reservaResumen(detalle()); track item.label) {
@@ -141,10 +206,10 @@ import { Reserva } from '../../../shared/models/reserva.model';
               </section>
               <section>
                 <h3>Atraccion</h3>
-                <p><strong>{{ detalle().atraccion?.nombre || '-' }}</strong></p>
-                <p>{{ detalle().atraccion?.destino || '-' }} {{ detalle().atraccion?.pais ? '- ' + detalle().atraccion.pais : '' }}</p>
-                <p>{{ detalle().atraccion?.fecha || '-' }} {{ detalle().atraccion?.hora_inicio || detalle().atraccion?.horaInicio || '' }}</p>
-                <p>{{ detalle().atraccion?.direccion || '-' }}</p>
+                <p><strong>{{ atraccionFactura(detalle()).nombre }}</strong></p>
+                <p>{{ atraccionFactura(detalle()).fecha }} {{ atraccionFactura(detalle()).hora }}</p>
+                <p>Reserva: {{ reservaFactura(detalle())?.codigo || '-' }}</p>
+                <p>Estado reserva: {{ reservaFactura(detalle())?.estado || '-' }}</p>
               </section>
               <section>
                 <h3>Pago</h3>
@@ -154,7 +219,7 @@ import { Reserva } from '../../../shared/models/reserva.model';
               </section>
             </div>
           }
-          @if ((detalle().detalles || []).length) {
+          @if (lineasFactura(detalle()).length) {
           <div class="stack">
             <h3>{{ esFactura(detalle()) ? 'Detalle facturado' : 'Tickets' }}</h3>
             @if (esFactura(detalle())) {
@@ -165,9 +230,9 @@ import { Reserva } from '../../../shared/models/reserva.model';
                   <span>Precio</span>
                   <span>Total</span>
                 </div>
-                @for (linea of detalle().detalles || []; track linea.guid || linea.id || $index) {
+                @for (linea of lineasFactura(detalle()); track linea.guid || linea.ticketGuid || linea.ticket_guid || linea.id || $index) {
                   <div class="invoice-row">
-                    <span>{{ linea.titulo || linea.ticket_titulo || ('Ticket #' + (linea.ticket_id || linea.ticketId || '-')) }}</span>
+                    <span>{{ linea.titulo || linea.ticketTitulo || linea.ticket_titulo || ('Ticket #' + (linea.ticket_id || linea.ticketId || '-')) }}</span>
                     <span>{{ linea.cantidad }}</span>
                     <span>{{ linea.precio_unitario || linea.precioUnitario }} {{ detalle().moneda || 'USD' }}</span>
                     <span>{{ linea.subtotal }} {{ detalle().moneda || 'USD' }}</span>
@@ -183,10 +248,10 @@ import { Reserva } from '../../../shared/models/reserva.model';
                 <strong>GRACIAS POR SU CONFIANZA</strong>
               </div>
             } @else {
-              @for (linea of detalle().detalles || []; track linea.guid || linea.id || $index) {
+              @for (linea of lineasFactura(detalle()); track linea.guid || linea.ticketGuid || linea.ticket_guid || linea.id || $index) {
                 <div class="compact-row">
                   <span>
-                    <strong>{{ linea.titulo || linea.ticket_titulo || ('Ticket #' + (linea.ticket_id || linea.ticketId || '-')) }}</strong>
+                    <strong>{{ linea.titulo || linea.ticketTitulo || linea.ticket_titulo || ('Ticket #' + (linea.ticket_id || linea.ticketId || '-')) }}</strong>
                     <small>{{ linea.tipo_participante || linea.tipoParticipante || '' }} - Cantidad {{ linea.cantidad }} - {{ linea.precio_unitario || linea.precioUnitario }} USD c/u</small>
                   </span>
                   <strong>{{ linea.subtotal }} USD</strong>
@@ -197,44 +262,28 @@ import { Reserva } from '../../../shared/models/reserva.model';
           }
         </div>
       }
-
-      <div class="grid two">
-        <div class="panel stack">
-          <h2>Pagos</h2>
-          @for (item of pagos(); track item.guid || item.id || $index) {
-            <div class="compact-row">
-              <span>
-                <strong>{{ item.referencia || 'Pago registrado' }}</strong>
-                <small>{{ item.metodo }} - {{ item.estado }} - {{ formatearFecha(item.fecha_utc || item.fechaUtc) }}</small>
-              </span>
-              <strong>{{ item.monto }} {{ item.moneda || 'USD' }}</strong>
-            </div>
-          } @empty {
-            <p class="muted">Sin pagos.</p>
-          }
-        </div>
-        <div class="panel stack">
-          <h2>Facturas</h2>
-          @for (item of facturas(); track item.guid || item.id || $index) {
-            <div class="compact-row">
-              <span>
-                <strong>{{ item.numero || item.guid }}</strong>
-                <small>{{ item.estado }} - {{ formatearFecha(item.fecha_emision || item.fechaEmision) }}</small>
-              </span>
-              <strong>{{ item.total }} {{ item.moneda || 'USD' }}</strong>
-              <button class="btn secondary" type="button" (click)="verFactura(item.guid)">Ver</button>
-            </div>
-          } @empty {
-            <p class="muted">Sin facturas.</p>
-          }
-        </div>
-      </div>
-
       @if (mensaje()) {
         <div class="panel">{{ mensaje() }}</div>
       }
     </section>
-  `
+  `,
+  styles: [`
+    .activity-tabs { position: sticky; top: 0; z-index: 2; }
+    .activity-layout { align-items: start; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr); }
+    .activity-panel { min-height: 240px; }
+    .activity-item { min-height: auto; padding: 14px 0; }
+    .activity-item span:first-child { min-width: 0; }
+    .activity-item small { display: block; margin-top: 4px; }
+    .card-form { background: var(--surface-muted); border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; }
+    .card-brand-row { display: flex; grid-column: 1 / -1; justify-content: flex-end; }
+    .card-brand { align-self: start; background: #0f766e; border-radius: 999px; color: #fff; font-weight: 800; padding: 8px 12px; }
+    .section-head .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    @media (max-width: 980px) {
+      .activity-layout { grid-template-columns: 1fr; }
+      .activity-tabs { position: static; }
+      .card-form { grid-template-columns: 1fr; }
+    }
+  `]
 })
 export class MisReservasPageComponent implements OnInit {
   reservas = signal<Reserva[]>([]);
@@ -243,8 +292,10 @@ export class MisReservasPageComponent implements OnInit {
   facturas = signal<any[]>([]);
   datosFacturacion = signal<any[]>([]);
   mensaje = signal('');
+  actividad = signal<'reservas' | 'facturas' | 'pagos'>('reservas');
   pago = { reservaGuid: '', metodo: 'TARJETA', monto: 0, referencia: '', datosFacturacionGuid: '', origenCanal: 'WEB' };
   facturacionForm = this.nuevoDatoFacturacion();
+  tarjeta = { titular: '', numero: '', expira: '', cvv: '' };
   cancelacion = { reservaGuid: '', motivo: '' };
 
   constructor(
@@ -258,16 +309,17 @@ export class MisReservasPageComponent implements OnInit {
 
   cargar() {
     this.api.misReservas().subscribe((response) => {
-      this.reservas.set(response.data);
-      if (this.pago.reservaGuid && !response.data.some((reserva) => reserva.guid === this.pago.reservaGuid && reserva.estado === 'PENDIENTE')) {
+      const reservas = this.itemsFromResponse(response.data) as Reserva[];
+      this.reservas.set(reservas);
+      if (this.pago.reservaGuid && !reservas.some((reserva) => reserva.guid === this.pago.reservaGuid && reserva.estado === 'PENDIENTE')) {
         this.pago.reservaGuid = '';
         this.pago.monto = 0;
       }
     });
-    this.api.misPagos({ limit: 20 }).subscribe((response) => this.pagos.set(response.data));
-    this.api.misFacturas({ limit: 20 }).subscribe((response) => this.facturas.set(response.data));
+    this.api.misPagos({ limit: 20 }).subscribe((response) => this.pagos.set(this.itemsFromResponse(response.data)));
+    this.api.misFacturas({ limit: 20 }).subscribe((response) => this.facturas.set(this.itemsFromResponse(response.data)));
     this.api.misDatosFacturacion().subscribe((response) => {
-      this.datosFacturacion.set(response.data);
+      this.datosFacturacion.set(this.itemsFromResponse(response.data));
       this.pago.datosFacturacionGuid ||= localStorage.getItem('toyd_facturacion_guid') ?? '';
       this.seleccionarDatoFacturacion();
     });
@@ -284,11 +336,11 @@ export class MisReservasPageComponent implements OnInit {
   }
 
   reservasPendientes() {
-    return this.reservas().filter((reserva) => reserva.estado === 'PENDIENTE');
+    return this.itemsFromResponse(this.reservas()).filter((reserva) => reserva.estado === 'PENDIENTE') as Reserva[];
   }
 
   seleccionarReservaPago() {
-    const reserva = this.reservas().find((item) => item.guid === this.pago.reservaGuid);
+    const reserva = (this.itemsFromResponse(this.reservas()) as Reserva[]).find((item) => item.guid === this.pago.reservaGuid);
     this.pago.monto = reserva?.total ?? 0;
   }
 
@@ -324,6 +376,10 @@ export class MisReservasPageComponent implements OnInit {
       return;
     }
 
+    if (!this.tarjetaValida()) {
+      return;
+    }
+
     const confirmar = (datosFacturacionGuid: string | null) =>
     this.api.confirmarPago({
       ...this.pago,
@@ -335,6 +391,7 @@ export class MisReservasPageComponent implements OnInit {
       next: () => {
         this.mensaje.set('Pago confirmado.');
         this.notifications.success('Pago confirmado y factura generada.');
+        this.limpiarTarjeta();
         this.cargar();
       },
       error: (error: Error) => this.notifications.error(error.message)
@@ -373,12 +430,80 @@ export class MisReservasPageComponent implements OnInit {
     return `PAY-${Date.now()}-${random}`;
   }
 
+  formatearTarjeta() {
+    const digits = this.tarjeta.numero.replace(/\D/g, '').slice(0, 16);
+    this.tarjeta.numero = digits.replace(/(.{4})/g, '$1 ').trim();
+  }
+
+  formatearExpiracion() {
+    const digits = this.tarjeta.expira.replace(/\D/g, '').slice(0, 4);
+    this.tarjeta.expira = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+  }
+
+  soloNumerosCvv() {
+    this.tarjeta.cvv = this.tarjeta.cvv.replace(/\D/g, '').slice(0, 4);
+  }
+
+  marcaTarjeta() {
+    const digits = this.tarjeta.numero.replace(/\D/g, '');
+    if (digits.startsWith('4')) return 'Visa';
+    if (/^5[1-5]/.test(digits)) return 'Mastercard';
+    if (/^3[47]/.test(digits)) return 'Amex';
+    return 'Tarjeta';
+  }
+
+  private tarjetaValida() {
+    const digits = this.tarjeta.numero.replace(/\D/g, '');
+    if (!this.tarjeta.titular.trim()) {
+      this.notifications.error('Ingresa el titular de la tarjeta ficticia.');
+      return false;
+    }
+    if (digits.length < 13) {
+      this.notifications.error('Ingresa un numero de tarjeta ficticia valido.');
+      return false;
+    }
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(this.tarjeta.expira)) {
+      this.notifications.error('Ingresa la expiracion ficticia en formato MM/AA.');
+      return false;
+    }
+    if (!/^\d{3,4}$/.test(this.tarjeta.cvv)) {
+      this.notifications.error('Ingresa un CVV ficticio valido.');
+      return false;
+    }
+    return true;
+  }
+
+  private limpiarTarjeta() {
+    this.tarjeta = { titular: '', numero: '', expira: '', cvv: '' };
+  }
+
   verFactura(guid: string) {
-    this.api.miFactura(guid).subscribe((response) => this.detalle.set(response.data));
+    this.api.miFactura(guid).subscribe((response) => {
+      const factura = response.data as any;
+      const reservaGuid = factura?.reservaGuid ?? factura?.reserva_guid;
+
+      if (!reservaGuid) {
+        this.detalle.set(factura);
+        return;
+      }
+
+      this.api.obtenerMiReserva(reservaGuid).subscribe({
+        next: (reservaResponse) => this.detalle.set({
+          ...factura,
+          reserva: reservaResponse.data,
+          detalles: reservaResponse.data.detalles ?? []
+        }),
+        error: () => this.detalle.set(factura)
+      });
+    });
+  }
+
+  cerrarDetalle() {
+    this.detalle.set(null);
   }
 
   seleccionarDatoFacturacion() {
-    const dato = this.datosFacturacion().find((item) => item.guid === this.pago.datosFacturacionGuid);
+    const dato = this.itemsFromResponse(this.datosFacturacion()).find((item) => item.guid === this.pago.datosFacturacionGuid);
     this.facturacionForm = dato ? {
       tipoIdentificacion: dato.tipo_identificacion ?? dato.tipoIdentificacion ?? 'CEDULA',
       numeroIdentificacion: dato.numero_identificacion ?? dato.numeroIdentificacion ?? '',
@@ -432,7 +557,7 @@ export class MisReservasPageComponent implements OnInit {
     if (this.esFactura(value)) {
       return [
         { label: 'Numero', value: value.numero || '-' },
-        { label: 'Fecha emision', value: this.formatearFecha(value.fecha_emision ?? value.fechaEmision) },
+        { label: 'Fecha emision', value: this.formatearFecha(this.fechaFactura(value)) },
         { label: 'Subtotal', value: `${value.subtotal ?? '-'} ${value.moneda ?? 'USD'}` },
         { label: 'IVA', value: `${value.valor_iva ?? value.valorIva ?? '-'} ${value.moneda ?? 'USD'}` },
         { label: 'Total', value: `${value.total ?? '-'} ${value.moneda ?? 'USD'}` }
@@ -469,6 +594,38 @@ export class MisReservasPageComponent implements OnInit {
       telefono: '',
       direccion: '',
       estado: 'A'
+    };
+  }
+
+  private itemsFromResponse(value: any): any[] {
+    if (Array.isArray(value)) return value;
+    if (Array.isArray(value?.items)) return value.items;
+    if (Array.isArray(value?.data)) return value.data;
+    return [];
+  }
+
+  fechaFactura(value: any) {
+    return value?.fecha_emision_utc ?? value?.fechaEmisionUtc ?? value?.fecha_emision ?? value?.fechaEmision;
+  }
+
+  reservaFactura(value: any) {
+    return value?.reserva ?? value?.Reserva ?? null;
+  }
+
+  lineasFactura(value: any): any[] {
+    return this.itemsFromResponse(value?.detalles ?? value?.detalle ?? this.reservaFactura(value)?.detalles);
+  }
+
+  atraccionFactura(value: any) {
+    const reserva = this.reservaFactura(value);
+    const fecha = reserva?.horFecha ?? reserva?.hor_fecha ?? reserva?.fecha ?? '-';
+    const inicio = reserva?.horHoraInicio ?? reserva?.hor_hora_inicio ?? '';
+    const fin = reserva?.horHoraFin ?? reserva?.hor_hora_fin ?? '';
+
+    return {
+      nombre: reserva?.atraccionNombre ?? reserva?.atraccion_nombre ?? value?.atraccion?.nombre ?? '-',
+      fecha,
+      hora: `${inicio}${fin ? ' - ' + fin : ''}`.trim() || '-'
     };
   }
 }

@@ -34,7 +34,9 @@ export class AuthService {
   }
 
   logout() {
-    this.api.logoutBackend().subscribe({ error: () => undefined });
+    if (this.token) {
+      this.api.logoutBackend().subscribe({ error: () => undefined });
+    }
     this.clearSession();
   }
 
