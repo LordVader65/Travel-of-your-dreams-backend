@@ -84,6 +84,7 @@ export class LoginPageComponent {
     this.error.set(null);
     if (this.modo() === 'registro') {
       this.api.register({
+        login: this.login,
         TipoIdentificacion: this.registro.tipoIdentificacion,
         NumeroIdentificacion: this.registro.numeroIdentificacion,
         Nombres: this.registro.nombres,
@@ -94,7 +95,24 @@ export class LoginPageComponent {
         Telefono: this.registro.telefono,
         Direccion: this.registro.direccion
       }).subscribe({
-        next: () => this.auth.login({ login: this.login, password: this.password }).subscribe(() => void this.router.navigateByUrl('/')),
+        next: () => this.auth.login({ login: this.login, password: this.password }).subscribe({
+          next: () => {
+            this.api.actualizarMiPerfil({
+              tipoIdentificacion: this.registro.tipoIdentificacion,
+              numeroIdentificacion: this.registro.numeroIdentificacion,
+              nombres: this.registro.nombres,
+              apellidos: this.registro.apellidos,
+              razonSocial: this.registro.razonSocial,
+              correo: this.login,
+              telefono: this.registro.telefono,
+              direccion: this.registro.direccion
+            }).subscribe({
+              next: () => void this.router.navigateByUrl('/'),
+              error: (error: Error) => this.error.set(error.message)
+            });
+          },
+          error: (error: Error) => this.error.set(error.message)
+        }),
         error: (error: Error) => this.error.set(error.message)
       });
       return;

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsReservas.Api.Configuration;
 using TravelDreams.MsReservas.Api.Grpc;
+using TravelDreams.MsReservas.Api.Infrastructure.EventBus.V3;
 using TravelDreams.MsReservas.Api.Middleware;
 using TravelDreams.MsReservas.Business;
 using TravelDreams.MsReservas.DataAccess.Context;
@@ -24,6 +25,7 @@ builder.Services.AddHealthChecks();
 builder.Services.AddDbContext<ReservasDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddReservasDataManagement();
 builder.Services.AddReservasBusiness();
+builder.Services.AddReservasEventBusV3(builder.Configuration);
 
 var app = builder.Build();
 

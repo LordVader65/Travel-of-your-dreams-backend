@@ -1,6 +1,7 @@
 using TravelDreams.ApiGateway;
 using TravelDreams.ApiGateway.Audit;
 using TravelDreams.ApiGateway.Configuration;
+using TravelDreams.ApiGateway.Marketplace.V3;
 using TravelDreams.ApiGateway.Proxy;
 using TravelDreams.ApiGateway.Security;
 
@@ -41,6 +42,7 @@ builder.Services.AddHttpClient<AuditHttpClient>((provider, client) =>
 builder.Services.AddScoped<GatewayProxy>();
 builder.Services.AddSingleton<GatewayJwtValidator>();
 builder.Services.AddSingleton<BookingTokenService>();
+builder.Services.AddMarketplaceV3(builder.Configuration);
 
 var app = builder.Build();
 
@@ -80,6 +82,11 @@ app.MapPost("/api/v1/integrations/booking/token", (BookingTokenRequest request, 
 
     return Results.Ok(new { status = StatusCodes.Status200OK, data = tokens.BuildTokenResponse() });
 });
+
+if (builder.Configuration.GetValue("MarketplaceV3:Enabled", false))
+{
+    app.MapGraphQL("/graphql");
+}
 
 app.Map("/{**path}", async (HttpContext context, GatewayProxy proxy) =>
 {

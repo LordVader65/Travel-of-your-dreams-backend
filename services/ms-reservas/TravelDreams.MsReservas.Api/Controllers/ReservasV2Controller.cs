@@ -9,7 +9,7 @@ namespace TravelDreams.MsReservas.Api.Controllers;
 [Route("api/v2/reservas")]
 public sealed class ReservasV2Controller : ControllerBase
 {
-    private const int BookingExpirationMinutes = 30;
+    private const int BookingExpirationMinutes = 3;
     private readonly IReservasService _reservas;
 
     public ReservasV2Controller(IReservasService reservas)

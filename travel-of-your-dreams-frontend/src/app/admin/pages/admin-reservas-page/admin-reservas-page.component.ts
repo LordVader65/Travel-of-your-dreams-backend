@@ -11,7 +11,7 @@ import { Reserva } from '../../../shared/models/reserva.model';
   template: `
     <section class="page stack">
       <header class="admin-header">
-        <div>
+        <div class="page-title">
           <h1>Reservas</h1>
           <p class="muted">Gestion operativa de reservas, expiracion y facturacion.</p>
         </div>
@@ -21,8 +21,17 @@ import { Reserva } from '../../../shared/models/reserva.model';
         </span>
       </header>
 
-      <div class="grid two">
-        <form class="panel form-grid" (ngSubmit)="crearReserva()">
+      <nav class="app-tabs" aria-label="Reservas administrativas">
+        <button class="tab-button" [class.active]="tab() === 'listado'" type="button" (click)="tab.set('listado')">Listado</button>
+        @if (adminReservationActionsEnabled) {
+          <button class="tab-button" [class.active]="tab() === 'crear'" type="button" (click)="tab.set('crear')">Crear reserva</button>
+          <button class="tab-button" [class.active]="tab() === 'facturar'" type="button" (click)="tab.set('facturar')">Facturar</button>
+        }
+      </nav>
+
+      @if (adminReservationActionsEnabled) {
+      <div class="grid two" [hidden]="tab() !== 'crear' && tab() !== 'facturar'">
+        <form class="panel form-grid" [hidden]="tab() !== 'crear'" (ngSubmit)="crearReserva()">
           <h2>Crear reserva por cliente</h2>
           <label class="wide">Tipo de cliente
             <select name="modoCliente" [(ngModel)]="modoCliente" (change)="cambiarModoCliente()">
@@ -98,7 +107,7 @@ import { Reserva } from '../../../shared/models/reserva.model';
           <div class="actions wide"><button class="btn" type="submit">Crear reserva</button></div>
         </form>
 
-        <form class="panel form-grid" (ngSubmit)="generarFactura()">
+        <form class="panel form-grid" [hidden]="tab() !== 'facturar'" (ngSubmit)="generarFactura()">
           <h2>Generar factura</h2>
           <label class="wide">Reserva
             <select name="factReservaGuid" [(ngModel)]="factura.reservaGuid" (change)="seleccionarReservaFactura()" required>
@@ -134,19 +143,20 @@ import { Reserva } from '../../../shared/models/reserva.model';
           <div class="actions wide"><button class="btn" type="submit">Generar</button></div>
         </form>
       </div>
+      }
 
-      <div class="table panel">
+      <div class="table panel" [hidden]="tab() !== 'listado'">
         <input name="buscarReservas" placeholder="Buscar por codigo, estado o cliente" [(ngModel)]="busquedaReservas" />
         <div class="row head">
           <span>Codigo</span><span>Total</span><span>Estado</span><span>Acciones</span>
         </div>
         @for (reserva of reservasFiltradas(); track reserva.guid) {
           <div class="row">
-            <span><strong>{{ reserva.codigo }}</strong><small>{{ reserva.guid }}</small></span>
+            <span><strong>{{ reserva.codigo }}</strong><small>{{ nombreClienteReserva(reserva) }}</small></span>
             <span>{{ reserva.total }} {{ reserva.moneda }}</span>
             <span>{{ reserva.estado }}</span>
             <span class="actions">
-              <button class="btn secondary" type="button" (click)="ver(reserva.guid)">Ver</button>
+              <button class="btn secondary" type="button" (click)="abrirDetalle(reserva.guid)">Ver</button>
               <select class="state-select" [ngModel]="reserva.estado" [ngModelOptions]="{standalone: true}" (ngModelChange)="estado(reserva.guid, $event)">
                 <option value="PENDIENTE">Pendiente</option>
                 <option value="PAGADA">Pagada</option>
@@ -163,14 +173,58 @@ import { Reserva } from '../../../shared/models/reserva.model';
         }
       </div>
 
-      @if (detalle()) {
-        <div class="panel stack">
+      @if (detalle() && detalleModal()) {
+        <div class="modal-backdrop" (click)="cerrarDetalle()"></div>
+        <aside class="drawer-panel stack" role="dialog" aria-modal="true" aria-label="Detalle de reserva">
           <header class="section-head">
             <div>
-              <h2>{{ detalle()?.codigo }}</h2>
-              <p class="muted">{{ detalle()?.estado }} - {{ detalle()?.total }} {{ detalle()?.moneda }}</p>
+              <h2>{{ nombreReserva(detalle()) }}</h2>
+              <p class="muted">{{ nombreClienteDetalle() }} · {{ detalle()?.estado }} · {{ detalle()?.total }} {{ detalle()?.moneda }}</p>
             </div>
+            <button class="btn secondary" type="button" (click)="cerrarDetalle()">Cerrar</button>
           </header>
+
+          <div class="detail-grid">
+            <div>
+              <h3>Datos de operacion</h3>
+              <p><strong>Reserva:</strong> {{ nombreReserva(detalle()) }}</p>
+              <p><strong>Cliente:</strong> {{ nombreClienteDetalle() }}</p>
+              <p><strong>Canal:</strong> {{ valor(detalle()?.origenCanal || detalle()?.origen_canal) }}</p>
+              <p><strong>Estado:</strong> {{ valor(detalle()?.estado) }}</p>
+              <p><strong>Creada:</strong> {{ formatearFecha(detalle()?.fechaReservaUtc || detalle()?.fecha_reserva_utc) }}</p>
+              <p><strong>Expira:</strong> {{ formatearFecha(detalle()?.fechaExpiracionUtc || detalle()?.fecha_expiracion_utc) }}</p>
+            </div>
+
+            <div>
+              <h3>Cliente</h3>
+              @if (detalleCliente(); as cliente) {
+                <p><strong>Identificacion:</strong> {{ valor(cliente.tipoIdentificacion || cliente.tipo_identificacion) }} {{ valor(cliente.numeroIdentificacion || cliente.numero_identificacion) }}</p>
+                <p><strong>Nombre:</strong> {{ nombreClienteSolo(cliente) }}</p>
+                <p><strong>Razon social:</strong> {{ valor(cliente.razonSocial || cliente.razon_social) }}</p>
+                <p><strong>Correo:</strong> {{ valor(cliente.correo) }}</p>
+                <p><strong>Telefono:</strong> {{ valor(cliente.telefono) }}</p>
+                <p><strong>Direccion:</strong> {{ valor(cliente.direccion) }}</p>
+                <p><strong>Estado:</strong> {{ valor(cliente.estado) }}</p>
+              } @else {
+                <p class="muted">No se pudo cargar el detalle del cliente.</p>
+              }
+            </div>
+
+            <div>
+              <h3>Atraccion y horario</h3>
+              <p><strong>Atraccion:</strong> {{ valor(detalle()?.atraccionNombre || detalle()?.atraccion_nombre) }}</p>
+              <p><strong>Fecha:</strong> {{ valor(detalle()?.horFecha || detalle()?.hor_fecha) }}</p>
+              <p><strong>Hora:</strong> {{ valor(detalle()?.horHoraInicio || detalle()?.hor_hora_inicio) }} - {{ valor(detalle()?.horHoraFin || detalle()?.hor_hora_fin) }}</p>
+            </div>
+
+            <div>
+              <h3>Valores</h3>
+              <p><strong>Subtotal:</strong> {{ valor(detalle()?.subtotal) }} {{ detalle()?.moneda || 'USD' }}</p>
+              <p><strong>IVA:</strong> {{ valor(detalle()?.valorIva || detalle()?.valor_iva) }} {{ detalle()?.moneda || 'USD' }}</p>
+              <p><strong>Total:</strong> {{ valor(detalle()?.total) }} {{ detalle()?.moneda || 'USD' }}</p>
+            </div>
+          </div>
+
           <div class="info-grid">
             @for (item of reservaResumen(detalle()); track item.label) {
               <div class="info-item">
@@ -183,15 +237,15 @@ import { Reserva } from '../../../shared/models/reserva.model';
           @for (linea of detalle()?.detalles || []; track linea.guid || linea.id || $index) {
             <div class="compact-row">
               <span>
-                <strong>{{ linea.titulo || ('Ticket #' + (linea.ticket_id || linea.ticketId || '-')) }}</strong>
-                <small>Cantidad {{ linea.cantidad }} - {{ linea.precio_unitario || linea.precioUnitario }} USD c/u</small>
+                <strong>{{ linea.ticketTitulo || linea.ticket_titulo || linea.titulo || ('Ticket #' + (linea.ticket_id || linea.ticketId || '-')) }}</strong>
+                <small>{{ linea.tipoParticipante || linea.tipo_participante || 'Participante' }} · cantidad {{ linea.cantidad }} · {{ linea.precio_unitario || linea.precioUnitario }} USD c/u</small>
               </span>
               <strong>{{ linea.subtotal }} USD</strong>
             </div>
           } @empty {
             <p class="muted">Sin tickets registrados.</p>
           }
-        </div>
+        </aside>
       }
 
       @if (mensaje()) {
@@ -206,8 +260,14 @@ import { Reserva } from '../../../shared/models/reserva.model';
     .nested-form h3 { grid-column: 1 / -1; margin: 0; }
     .table { overflow-x: auto; }
     .table .row { min-width: 720px; }
+    .detail-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .detail-grid div { background: var(--surface-muted); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+    .detail-grid p { margin: 6px 0; overflow-wrap: anywhere; }
+    .modal-backdrop { background: rgba(2, 24, 22, 0.42); inset: 0; position: fixed; z-index: 30; }
+    .drawer-panel { background: #fff; border-left: 1px solid var(--line); box-shadow: -22px 0 60px rgba(15, 23, 42, 0.18); inset: 0 0 0 auto; max-width: min(980px, calc(100vw - 24px)); overflow: auto; padding: 28px; position: fixed; width: 76vw; z-index: 31; }
     @media (max-width: 920px) {
-      .grid.two, .form-grid, .nested-form { grid-template-columns: 1fr; }
+      .grid.two, .form-grid, .nested-form, .detail-grid { grid-template-columns: 1fr; }
+      .drawer-panel { max-width: 100vw; width: 100vw; }
       .admin-header { align-items: stretch; flex-direction: column; }
       .admin-header .actions { justify-content: stretch; }
       .admin-header .actions .btn { flex: 1; }
@@ -223,6 +283,7 @@ import { Reserva } from '../../../shared/models/reserva.model';
   `]
 })
 export class AdminReservasPageComponent implements OnInit {
+  readonly adminReservationActionsEnabled = false;
   reservas = signal<Reserva[]>([]);
   clientes = signal<any[]>([]);
   atracciones = signal<any[]>([]);
@@ -230,6 +291,9 @@ export class AdminReservasPageComponent implements OnInit {
   ticketsDisponibles = signal<any[]>([]);
   datosFacturacionFactura = signal<any[]>([]);
   detalle = signal<any | null>(null);
+  detalleCliente = signal<any | null>(null);
+  detalleModal = signal(false);
+  tab = signal<'listado' | 'crear' | 'facturar'>('listado');
   mensaje = signal('');
   fechaMinima = this.today();
   modoCliente: 'registrado' | 'externo' = 'registrado';
@@ -302,7 +366,30 @@ export class AdminReservasPageComponent implements OnInit {
   }
 
   ver(guid: string) {
-    this.api.adminReserva(guid).subscribe((response) => this.detalle.set(response.data));
+    this.detalleCliente.set(null);
+    this.api.adminReserva(guid).subscribe({
+      next: (response) => {
+        this.detalle.set(response.data);
+        const clienteGuid = (response.data as any)?.clienteGuid ?? (response.data as any)?.cliente_guid;
+        if (!clienteGuid) return;
+        this.api.adminCliente(clienteGuid).subscribe({
+          next: (clienteResponse) => this.detalleCliente.set(clienteResponse.data),
+          error: () => this.detalleCliente.set(null)
+        });
+      },
+      error: (error) => this.notifications.error(error?.error?.message ?? 'No se pudo cargar la reserva.')
+    });
+  }
+
+  abrirDetalle(guid: string) {
+    this.ver(guid);
+    this.detalleModal.set(true);
+  }
+
+  cerrarDetalle() {
+    this.detalleModal.set(false);
+    this.detalle.set(null);
+    this.detalleCliente.set(null);
   }
 
   crearReserva() {
@@ -513,8 +600,10 @@ export class AdminReservasPageComponent implements OnInit {
 
   reservaResumen(value: any) {
     return [
-      { label: 'Cliente ID', value: value?.cliente_id ?? value?.clienteId ?? '-' },
-      { label: 'Horario ID', value: value?.horario_id ?? value?.horarioId ?? '-' },
+      { label: 'Codigo', value: value?.codigo ?? '-' },
+      { label: 'Atraccion', value: value?.atraccionNombre ?? value?.atraccion_nombre ?? '-' },
+      { label: 'Fecha', value: value?.horFecha ?? value?.hor_fecha ?? '-' },
+      { label: 'Hora', value: `${value?.horHoraInicio ?? value?.hor_hora_inicio ?? '-'} - ${value?.horHoraFin ?? value?.hor_hora_fin ?? '-'}` },
       { label: 'Subtotal', value: `${value?.subtotal ?? '-'} ${value?.moneda ?? 'USD'}` },
       { label: 'IVA', value: `${value?.valor_iva ?? value?.valorIva ?? '-'} ${value?.moneda ?? 'USD'}` },
       { label: 'Expira', value: this.formatearFecha(value?.fecha_expiracion_utc ?? value?.fechaExpiracionUtc) }
@@ -524,6 +613,42 @@ export class AdminReservasPageComponent implements OnInit {
   nombreCliente(cliente: any) {
     const nombre = [cliente.nombres, cliente.apellidos].filter(Boolean).join(' ');
     return `${nombre || cliente.razon_social || cliente.correo} - ${cliente.correo}`;
+  }
+
+  nombreClienteSolo(cliente: any) {
+    return [cliente?.nombres, cliente?.apellidos].filter(Boolean).join(' ') || cliente?.razonSocial || cliente?.razon_social || cliente?.correo || '-';
+  }
+
+  nombreClienteDetalle() {
+    const cliente = this.detalleCliente();
+    if (cliente) return this.nombreClienteSolo(cliente);
+    return this.nombreClienteReserva(this.detalle());
+  }
+
+  nombreReserva(value: any) {
+    if (!value) return 'Reserva';
+    const codigo = value.codigo ?? value.rev_codigo ?? 'Reserva';
+    const atraccion = value.atraccionNombre ?? value.atraccion_nombre;
+    return atraccion ? `${codigo} - ${atraccion}` : codigo;
+  }
+
+  nombreClienteReserva(reserva: any) {
+    if (!reserva) return '-';
+    const nombreSnapshot = reserva.clienteNombre ?? reserva.cliente_nombre ?? reserva.nombreCliente ?? reserva.nombre_cliente;
+    if (nombreSnapshot) return nombreSnapshot;
+
+    const clienteGuid = reserva.clienteGuid ?? reserva.cliente_guid;
+    const clienteId = reserva.cliente_id ?? reserva.clienteId;
+    const cliente = this.clientes().find((item) => {
+      if (clienteGuid && item.guid === clienteGuid) return true;
+      const currentId = item.id ?? item.cliente_id ?? item.clienteId;
+      return clienteId !== null && clienteId !== undefined && currentId !== null && currentId !== undefined && Number(currentId) === Number(clienteId);
+    });
+    return cliente ? this.nombreClienteSolo(cliente) : 'Cliente no resuelto';
+  }
+
+  valor(value: any) {
+    return value === null || value === undefined || value === '' ? '-' : value;
   }
 
   etiquetaDatoFacturacion(dato: any) {
@@ -542,7 +667,7 @@ export class AdminReservasPageComponent implements OnInit {
 
   reservasFiltradas() {
     const q = this.busquedaReservas.toLowerCase();
-    return this.reservas().filter((reserva) => !q || `${reserva.codigo} ${reserva.estado} ${this.nombreClientePorId(reserva.cliente_id ?? (reserva as any).clienteId)}`.toLowerCase().includes(q));
+    return this.reservas().filter((reserva) => !q || `${reserva.codigo} ${reserva.estado} ${this.nombreClienteReserva(reserva)} ${(reserva as any).origenCanal ?? (reserva as any).origen_canal}`.toLowerCase().includes(q));
   }
 
   nombreClientePorId(id: number) {
@@ -552,8 +677,11 @@ export class AdminReservasPageComponent implements OnInit {
 
   private clienteDeReservaSeleccionada() {
     const reserva = this.reservas().find((item) => item.guid === this.factura.reservaGuid);
+    const clienteGuid = (reserva as any)?.clienteGuid ?? (reserva as any)?.cliente_guid;
+    if (clienteGuid) return this.clientes().find((cliente) => cliente.guid === clienteGuid);
     const clienteId = reserva?.cliente_id ?? (reserva as any)?.clienteId;
-    return this.clientes().find((cliente) => (cliente.id ?? cliente.cliente_id ?? cliente.clienteId) === clienteId);
+    if (clienteId === null || clienteId === undefined) return null;
+    return this.clientes().find((cliente) => Number(cliente.id ?? cliente.cliente_id ?? cliente.clienteId) === Number(clienteId));
   }
 
   private nuevoDatoFacturacion() {

@@ -10,6 +10,8 @@ export interface AtraccionPublica {
   disponible: boolean;
   free_cancellation: boolean;
   skip_the_line: boolean;
+  incluye_transporte?: boolean;
+  incluye_acompaniante?: boolean;
   total_resenias: number;
 }
 

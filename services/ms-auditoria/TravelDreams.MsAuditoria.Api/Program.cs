@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsAuditoria.Api.Configuration;
+using TravelDreams.MsAuditoria.Api.Infrastructure.EventBus.V3;
 using TravelDreams.MsAuditoria.Api.Middleware;
 using TravelDreams.MsAuditoria.Business;
 using TravelDreams.MsAuditoria.DataAccess.Context;
@@ -22,6 +23,7 @@ builder.Services.AddHealthChecks();
 builder.Services.AddDbContext<AuditoriaDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddAuditoriaDataManagement();
 builder.Services.AddAuditoriaBusiness();
+builder.Services.AddAuditoriaEventBusV3(builder.Configuration);
 
 var app = builder.Build();
 

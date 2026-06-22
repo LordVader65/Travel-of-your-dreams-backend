@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TravelDreams.MsFacturacion.Api.Configuration;
+using TravelDreams.MsFacturacion.Api.Infrastructure.EventBus.V3;
 using TravelDreams.MsFacturacion.Api.Middleware;
 using TravelDreams.MsFacturacion.Business;
 using TravelDreams.MsFacturacion.DataAccess.Context;
@@ -22,6 +23,7 @@ builder.Services.AddHealthChecks();
 builder.Services.AddDbContext<FacturacionDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddFacturacionDataManagement();
 builder.Services.AddFacturacionBusiness();
+builder.Services.AddFacturacionEventBusV3(builder.Configuration);
 
 var app = builder.Build();
 

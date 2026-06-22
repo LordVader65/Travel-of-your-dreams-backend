@@ -139,7 +139,7 @@ public sealed class ReservasDataService : IReservasDataService
         return true;
     }
 
-    public async Task<int> ExpirarPendientesAsync(string usuario, string ip, Func<Guid, int, CancellationToken, Task> releaseAvailability, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ReservaDataModel>> ExpirarPendientesAsync(string usuario, string ip, Func<Guid, int, CancellationToken, Task> releaseAvailability, CancellationToken ct = default)
     {
         var pendientes = await _db.Reservas.Include(x => x.Detalles)
             .Where(x => x.rev_estado == DatabaseConstants.ReservaPendiente && x.rev_fecha_expiracion_utc <= DateTime.UtcNow)
@@ -171,7 +171,7 @@ public sealed class ReservasDataService : IReservasDataService
         }
 
         await _db.SaveChangesAsync(ct);
-        return pendientes.Count;
+        return pendientes.Select(MapReserva).ToList();
     }
 
     public async Task<bool> CambiarEstadoAsync(Guid reservaGuid, string estado, string usuario, string ip, string? observacion, CancellationToken ct = default)
