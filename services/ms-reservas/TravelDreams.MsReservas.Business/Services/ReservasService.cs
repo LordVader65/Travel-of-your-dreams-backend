@@ -1,4 +1,5 @@
 using TravelDreams.MsReservas.Business.DTOs;
+using TravelDreams.MsReservas.Business.Events.V3;
 using TravelDreams.MsReservas.Business.Interfaces;
 using TravelDreams.MsReservas.DataManagement.Interfaces;
 using TravelDreams.MsReservas.DataManagement.Models;
@@ -9,11 +10,13 @@ public sealed class ReservasService : IReservasService
 {
     private readonly IReservasDataService _data;
     private readonly IAtraccionesIntegrationClient _atracciones;
+    private readonly IReservaEventPublisherV3 _eventsV3;
 
-    public ReservasService(IReservasDataService data, IAtraccionesIntegrationClient atracciones)
+    public ReservasService(IReservasDataService data, IAtraccionesIntegrationClient atracciones, IReservaEventPublisherV3 eventsV3)
     {
         _data = data;
         _atracciones = atracciones;
+        _eventsV3 = eventsV3;
     }
 
     public async Task<IReadOnlyList<ReservaResponse>> ListarAsync(Guid? clienteGuid, string? estado, CancellationToken ct = default)
@@ -94,7 +97,9 @@ public sealed class ReservasService : IReservasService
                 Usuario = "cliente",
                 Ip = "api"
             }, ct);
-            return Map(await _data.ObtenerAsync(guid, ct) ?? throw new InvalidOperationException("Reserva no encontrada despues de crear."));
+            var reserva = await _data.ObtenerAsync(guid, ct) ?? throw new InvalidOperationException("Reserva no encontrada despues de crear.");
+            await PublishReservaEventV3Async(reserva, "reserva.v3.creada", "reserva.v3.creada", null, ct, request.CorrelationId);
+            return Map(reserva);
         }
         catch
         {
@@ -113,15 +118,91 @@ public sealed class ReservasService : IReservasService
         if (ok)
         {
             await _atracciones.ReleaseAsync(reserva.HorarioGuid, reserva.Detalles.Sum(x => x.Cantidad), ct);
+            var cancelada = await _data.ObtenerAsync(reservaGuid, ct) ?? reserva;
+            await PublishReservaEventV3Async(cancelada, "reserva.v3.cancelada", "reserva.v3.cancelada", request.Motivo, ct);
         }
         return ok;
     }
 
-    public Task<int> ExpirarPendientesAsync(CancellationToken ct = default) =>
-        _data.ExpirarPendientesAsync("system", "worker", (horarioGuid, cantidad, token) => _atracciones.ReleaseAsync(horarioGuid, cantidad, token), ct);
+    public async Task<int> ExpirarPendientesAsync(CancellationToken ct = default)
+    {
+        var expiradas = await _data.ExpirarPendientesAsync("system", "worker", (horarioGuid, cantidad, token) => _atracciones.ReleaseAsync(horarioGuid, cantidad, token), ct);
+        foreach (var reserva in expiradas)
+        {
+            var isBooking = string.Equals(reserva.OrigenCanal, "BOOKING", StringComparison.OrdinalIgnoreCase);
+            var routingKey = isBooking ? "reserva.v3.cancelada" : "reserva.v3.expirada";
+            var eventType = routingKey;
+            var motivo = isBooking ? "EXPIRACION_AUTOMATICA_BOOKING" : "EXPIRACION_AUTOMATICA";
+            await PublishReservaEventV3Async(reserva, eventType, routingKey, motivo, ct);
+        }
 
-    public Task<bool> CambiarEstadoAsync(Guid reservaGuid, CambiarEstadoReservaRequest request, CancellationToken ct = default) =>
-        _data.CambiarEstadoAsync(reservaGuid, request.Estado, "admin", "api", request.Observacion, ct);
+        return expiradas.Count;
+    }
+
+    public async Task<bool> CambiarEstadoAsync(Guid reservaGuid, CambiarEstadoReservaRequest request, CancellationToken ct = default)
+    {
+        var ok = await _data.CambiarEstadoAsync(reservaGuid, request.Estado, "admin", "api", request.Observacion, ct);
+        if (!ok) return false;
+
+        var reserva = await _data.ObtenerAsync(reservaGuid, ct);
+        if (reserva is null) return true;
+
+        if (string.Equals(request.Estado, "PAGADA", StringComparison.OrdinalIgnoreCase))
+        {
+            await PublishReservaEventV3Async(reserva, "reserva.v3.pagada", "reserva.v3.pagada", request.Observacion, ct);
+        }
+        else if (string.Equals(request.Estado, "CANCELADA", StringComparison.OrdinalIgnoreCase))
+        {
+            await PublishReservaEventV3Async(reserva, "reserva.v3.cancelada", "reserva.v3.cancelada", request.Observacion, ct);
+        }
+
+        return true;
+    }
+
+    private Task PublishReservaEventV3Async(
+        ReservaDataModel reserva,
+        string eventType,
+        string routingKey,
+        string? motivo,
+        CancellationToken ct,
+        Guid? correlationId = null)
+    {
+        var payload = new ReservaEventPayloadV3
+        {
+            ReservaGuid = reserva.Guid,
+            ReservaCodigo = reserva.Codigo,
+            ClienteGuid = reserva.ClienteGuid,
+            AtraccionGuid = reserva.AtraccionGuid,
+            HorarioGuid = reserva.HorarioGuid,
+            AtraccionNombre = reserva.AtraccionNombre,
+            HorFecha = reserva.HorFecha,
+            HorHoraInicio = reserva.HorHoraInicio,
+            HorHoraFin = reserva.HorHoraFin,
+            Estado = reserva.Estado,
+            OrigenCanal = reserva.OrigenCanal,
+            Subtotal = reserva.Subtotal,
+            ValorIva = reserva.ValorIva,
+            Total = reserva.Total,
+            Moneda = reserva.Moneda,
+            Motivo = motivo,
+            Lineas = reserva.Detalles.Select(x => new ReservaLineaEventPayloadV3
+            {
+                TicketGuid = x.TicketGuid,
+                TicketTitulo = x.TicketTitulo,
+                TipoParticipante = x.TipoParticipante,
+                Cantidad = x.Cantidad,
+                PrecioUnitario = x.PrecioUnitario,
+                Subtotal = x.Subtotal
+            }).ToList()
+        };
+
+        return _eventsV3.PublishAsync(new ReservaV3Event
+        {
+            EventType = eventType,
+            CorrelationId = correlationId ?? Guid.NewGuid(),
+            Payload = payload
+        }, routingKey, ct);
+    }
 
     private static ReservaResponse Map(ReservaDataModel model) => new()
     {

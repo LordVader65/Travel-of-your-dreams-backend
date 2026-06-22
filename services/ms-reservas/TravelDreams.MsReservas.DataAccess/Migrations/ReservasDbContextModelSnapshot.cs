@@ -398,6 +398,62 @@ namespace TravelDreams.MsReservas.DataAccess.Migrations
                     b.ToTable("reserva_estado_historial", (string)null);
                 });
 
+            modelBuilder.Entity("TravelDreams.MsReservas.DataAccess.Entities.V3.MarketplaceReservaSolicitudV3Entity", b =>
+                {
+                    b.Property<long>("rsol_id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("rsol_id"));
+
+                    b.Property<Guid>("cli_guid")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("rev_codigo")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("rev_guid")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("rsol_correlation_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("rsol_created_at_utc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("rsol_error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("rsol_estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("rsol_payload_json")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("rsol_updated_at_utc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("rsol_id");
+
+                    b.HasIndex("cli_guid");
+
+                    b.HasIndex("rsol_correlation_id")
+                        .IsUnique();
+
+                    b.HasIndex("rsol_estado");
+
+                    b.ToTable("reservas_solicitudes_v3", (string)null);
+                });
+
             modelBuilder.Entity("TravelDreams.MsReservas.DataAccess.Entities.ReservaDetalleEntity", b =>
                 {
                     b.HasOne("TravelDreams.MsReservas.DataAccess.Entities.ReservaEntity", "Reserva")

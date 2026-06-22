@@ -360,6 +360,67 @@ namespace TravelDreams.MsFacturacion.DataAccess.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TravelDreams.MsFacturacion.DataAccess.Entities.V3.MarketplacePagoSolicitudV3Entity", b =>
+                {
+                    b.Property<long>("fsol_id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("fsol_id"));
+
+                    b.Property<Guid>("cli_guid")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("fac_guid")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("fac_numero")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("fsol_correlation_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("fsol_created_at_utc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("fsol_error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("fsol_estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("fsol_payload_json")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("fsol_updated_at_utc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<Guid>("rev_guid")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("fsol_id");
+
+                    b.HasIndex("cli_guid");
+
+                    b.HasIndex("fsol_correlation_id")
+                        .IsUnique();
+
+                    b.HasIndex("fsol_estado");
+
+                    b.HasIndex("rev_guid");
+
+                    b.ToTable("facturacion_solicitudes_v3", (string)null);
+                });
+
             modelBuilder.Entity("TravelDreams.MsFacturacion.DataAccess.Entities.FacturaEntity", b =>
                 {
                     b.HasOne("TravelDreams.MsFacturacion.DataAccess.Entities.DatosFacturacionEntity", "DatosFacturacion")

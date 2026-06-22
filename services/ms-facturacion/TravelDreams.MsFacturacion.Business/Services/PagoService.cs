@@ -1,4 +1,5 @@
 using TravelDreams.MsFacturacion.Business.DTOs;
+using TravelDreams.MsFacturacion.Business.Events.V3;
 using TravelDreams.MsFacturacion.Business.Interfaces;
 using TravelDreams.MsFacturacion.DataManagement.Interfaces;
 using TravelDreams.MsFacturacion.DataManagement.Models;
@@ -10,12 +11,18 @@ public sealed class PagoService : IPagoService
     private readonly IPagoDataService _pagos;
     private readonly IFacturacionDataService _facturacion;
     private readonly IReservasIntegrationClient _reservas;
+    private readonly IFacturacionEventPublisherV3 _events;
 
-    public PagoService(IPagoDataService pagos, IFacturacionDataService facturacion, IReservasIntegrationClient reservas)
+    public PagoService(
+        IPagoDataService pagos,
+        IFacturacionDataService facturacion,
+        IReservasIntegrationClient reservas,
+        IFacturacionEventPublisherV3 events)
     {
         _pagos = pagos;
         _facturacion = facturacion;
         _reservas = reservas;
+        _events = events;
     }
 
     public async Task<PagedResponse<PagoResponse>> ListarAsync(PagoFiltroRequest filtro, CancellationToken ct = default) =>
@@ -71,6 +78,15 @@ public sealed class PagoService : IPagoService
         }, reserva.Subtotal, reserva.ValorIva, ct);
 
         await _reservas.MarkAsPaidAsync(reserva.ReservaGuid, factura.PagoGuid, factura.Guid, ct);
+        await PublishFacturacionEventsAsync(
+            reserva,
+            factura,
+            string.IsNullOrWhiteSpace(request.Metodo) ? "TARJETA" : request.Metodo.Trim().ToUpperInvariant(),
+            referencia,
+            request.OrigenCanal,
+            request.Observacion,
+            request.CorrelationId,
+            ct);
         return FacturacionMappers.Factura(factura);
     }
 
@@ -100,7 +116,55 @@ public sealed class PagoService : IPagoService
             Moneda = reserva.Moneda,
             Referencia = $"RECEPTOR-{reservaGuid:N}"[..Math.Min(41, $"RECEPTOR-{reservaGuid:N}".Length)],
             OrigenCanal = string.IsNullOrWhiteSpace(request.OrigenCanal) ? "BOOKING" : request.OrigenCanal,
-            Observacion = observacion
+            Observacion = observacion,
+            CorrelationId = request.CorrelationId
         }, ct);
+    }
+
+    private async Task PublishFacturacionEventsAsync(
+        ReservaPagoSnapshot reserva,
+        FacturaDataModel factura,
+        string metodo,
+        string referencia,
+        string? origenCanal,
+        string? observacion,
+        Guid? requestedCorrelationId,
+        CancellationToken ct)
+    {
+        var correlationId = requestedCorrelationId ?? Guid.NewGuid();
+        var payload = new FacturacionEventPayloadV3
+        {
+            ReservaGuid = reserva.ReservaGuid,
+            ReservaCodigo = reserva.Codigo,
+            ClienteGuid = reserva.ClienteGuid,
+            PagoGuid = factura.PagoGuid,
+            FacturaGuid = factura.Guid,
+            DatosFacturacionGuid = factura.DatosFacturacionGuid,
+            FacturaNumero = factura.Numero,
+            Metodo = factura.Pago?.Metodo ?? metodo,
+            Referencia = factura.Pago?.Referencia ?? referencia,
+            Subtotal = factura.Subtotal,
+            ValorIva = factura.ValorIva,
+            Total = factura.Total,
+            Moneda = factura.Moneda,
+            PagoEstado = factura.Pago?.Estado ?? "APROBADO",
+            FacturaEstado = factura.Estado,
+            OrigenCanal = factura.Pago?.OrigenCanal ?? origenCanal,
+            Observacion = factura.Observacion ?? factura.Pago?.Observacion ?? observacion
+        };
+
+        await _events.PublishAsync(new FacturacionV3Event
+        {
+            EventType = "facturacion.v3.pago_confirmado",
+            CorrelationId = correlationId,
+            Payload = payload
+        }, "facturacion.v3.pago_confirmado", ct);
+
+        await _events.PublishAsync(new FacturacionV3Event
+        {
+            EventType = "facturacion.v3.factura_emitida",
+            CorrelationId = correlationId,
+            Payload = payload
+        }, "facturacion.v3.factura_emitida", ct);
     }
 }

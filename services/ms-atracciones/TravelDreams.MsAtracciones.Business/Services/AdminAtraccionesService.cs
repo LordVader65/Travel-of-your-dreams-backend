@@ -1,4 +1,5 @@
 using TravelDreams.MsAtracciones.Business.DTOs;
+using TravelDreams.MsAtracciones.Business.Events.V3;
 using TravelDreams.MsAtracciones.Business.Interfaces;
 using TravelDreams.MsAtracciones.DataManagement.Interfaces;
 using TravelDreams.MsAtracciones.DataManagement.Models.Admin;
@@ -8,8 +9,13 @@ namespace TravelDreams.MsAtracciones.Business.Services;
 public sealed class AdminAtraccionesService : IAdminAtraccionesService
 {
     private readonly IAdminAtraccionesDataService _data;
+    private readonly IAtraccionesEventPublisherV3 _events;
 
-    public AdminAtraccionesService(IAdminAtraccionesDataService data) => _data = data;
+    public AdminAtraccionesService(IAdminAtraccionesDataService data, IAtraccionesEventPublisherV3 events)
+    {
+        _data = data;
+        _events = events;
+    }
 
     public Task<object> ListarCatalogoAsync(string tipo, CancellationToken ct = default) => tipo.ToLowerInvariant() switch
     {
@@ -21,7 +27,7 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
         _ => throw new InvalidOperationException("Catalogo no soportado.")
     };
 
-    public Task<object> GuardarCatalogoAsync(string tipo, int? id, AdminCatalogoRequest request, CancellationToken ct = default)
+    public async Task<object> GuardarCatalogoAsync(string tipo, int? id, AdminCatalogoRequest request, CancellationToken ct = default)
     {
         var model = new CatalogoUpsertDataModel
         {
@@ -35,7 +41,8 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
             ParentId = request.ParentId
         };
 
-        return tipo.ToLowerInvariant() switch
+        var normalized = tipo.ToLowerInvariant();
+        var result = normalized switch
         {
             "destinos" => Wrap(_data.GuardarDestinoAsync(model, ct)),
             "categorias" => Wrap(_data.GuardarCategoriaAsync(model, ct)),
@@ -44,10 +51,29 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
             "incluye" => Wrap(_data.GuardarIncluyeAsync(model, ct)),
             _ => throw new InvalidOperationException("Catalogo no soportado.")
         };
+
+        var data = await result;
+        await PublishCatalogoEventAsync(data, normalized, id.HasValue ? "actualizado" : "creado", ct);
+        return data;
     }
 
-    public Task<bool> DesactivarCatalogoAsync(string tipo, int id, CancellationToken ct = default) =>
-        _data.DesactivarCatalogoAsync(tipo, id, "admin", ct);
+    public async Task<bool> DesactivarCatalogoAsync(string tipo, int id, CancellationToken ct = default)
+    {
+        var result = await _data.DesactivarCatalogoAsync(tipo, id, "admin", ct);
+        if (result)
+        {
+            await PublishAsync("catalogo.v3.desactivado", "catalogo.v3.desactivado", new AtraccionesEventPayloadV3
+            {
+                Entidad = "catalogo",
+                Accion = "desactivado",
+                CatalogoTipo = tipo.ToLowerInvariant(),
+                Id = id,
+                Estado = "I"
+            }, ct);
+        }
+
+        return result;
+    }
 
     public async Task<object> ListarAtraccionesAsync(CancellationToken ct = default) => await _data.ListarAtraccionesAsync(ct);
     public async Task<object?> ObtenerAtraccionAsync(Guid guid, CancellationToken ct = default) => await _data.ObtenerAtraccionAsync(guid, ct);
@@ -55,16 +81,78 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
     {
         ValidateAtraccion(request);
 
-        return await _data.GuardarAtraccionAsync(new AtraccionUpsertDataModel { Guid = guid, DestinoId = request.DestinoId, NumeroEstablecimiento = request.NumeroEstablecimiento, Nombre = request.Nombre.Trim(), Descripcion = request.Descripcion, Direccion = request.Direccion, DuracionMinutos = request.DuracionMinutos, PuntoEncuentro = request.PuntoEncuentro, PrecioReferencia = request.PrecioReferencia, IncluyeAcompaniante = request.IncluyeAcompaniante, IncluyeTransporte = request.IncluyeTransporte, Disponible = request.Disponible, FreeCancellation = request.FreeCancellation, SkipTheLine = request.SkipTheLine, Usuario = "admin" }, ct);
+        var result = await _data.GuardarAtraccionAsync(new AtraccionUpsertDataModel { Guid = guid, DestinoId = request.DestinoId, NumeroEstablecimiento = request.NumeroEstablecimiento, Nombre = request.Nombre.Trim(), Descripcion = request.Descripcion, Direccion = request.Direccion, DuracionMinutos = request.DuracionMinutos, PuntoEncuentro = request.PuntoEncuentro, PrecioReferencia = request.PrecioReferencia, IncluyeAcompaniante = request.IncluyeAcompaniante, IncluyeTransporte = request.IncluyeTransporte, Disponible = request.Disponible, FreeCancellation = request.FreeCancellation, SkipTheLine = request.SkipTheLine, Usuario = "admin" }, ct);
+        var eventType = guid.HasValue ? "atraccion.v3.actualizada" : "atraccion.v3.creada";
+        await PublishAsync(eventType, eventType, new AtraccionesEventPayloadV3
+        {
+            Entidad = "atraccion",
+            Accion = guid.HasValue ? "actualizada" : "creada",
+            Guid = result.Guid,
+            Id = result.Id,
+            AtraccionGuid = result.Guid,
+            AtraccionId = result.Id,
+            Nombre = result.Nombre,
+            Estado = result.Estado,
+            Snapshot = result
+        }, ct);
+        return result;
     }
 
-    public Task<bool> DesactivarAtraccionAsync(Guid guid, CancellationToken ct = default) => _data.DesactivarAtraccionAsync(guid, "admin", ct);
+    public async Task<bool> DesactivarAtraccionAsync(Guid guid, CancellationToken ct = default)
+    {
+        var result = await _data.DesactivarAtraccionAsync(guid, "admin", ct);
+        if (result)
+        {
+            await PublishAsync("atraccion.v3.desactivada", "atraccion.v3.desactivada", new AtraccionesEventPayloadV3
+            {
+                Entidad = "atraccion",
+                Accion = "desactivada",
+                Guid = guid,
+                AtraccionGuid = guid,
+                Estado = "I"
+            }, ct);
+        }
+
+        return result;
+    }
 
     public async Task<object> ListarTicketsAsync(CancellationToken ct = default) => await _data.ListarTicketsAsync(ct);
-    public async Task<object> GuardarTicketAsync(Guid? guid, AdminTicketRequest request, CancellationToken ct = default) =>
-        await _data.GuardarTicketAsync(new TicketUpsertDataModel { Guid = guid, AtraccionId = request.AtraccionId, Titulo = request.Titulo, Precio = request.Precio, Moneda = request.Moneda, TipoParticipante = request.TipoParticipante, CapacidadMaxima = request.CapacidadMaxima, Usuario = "admin" }, ct);
+    public async Task<object> GuardarTicketAsync(Guid? guid, AdminTicketRequest request, CancellationToken ct = default)
+    {
+        var result = await _data.GuardarTicketAsync(new TicketUpsertDataModel { Guid = guid, AtraccionId = request.AtraccionId, Titulo = request.Titulo, Precio = request.Precio, Moneda = request.Moneda, TipoParticipante = request.TipoParticipante, CapacidadMaxima = request.CapacidadMaxima, Usuario = "admin" }, ct);
+        var eventType = guid.HasValue ? "ticket.v3.actualizado" : "ticket.v3.creado";
+        await PublishAsync(eventType, eventType, new AtraccionesEventPayloadV3
+        {
+            Entidad = "ticket",
+            Accion = guid.HasValue ? "actualizado" : "creado",
+            Guid = result.Guid,
+            Id = result.Id,
+            TicketGuid = result.Guid,
+            AtraccionId = result.AtraccionId,
+            Nombre = result.Titulo,
+            Estado = result.Estado,
+            Snapshot = result
+        }, ct);
+        return result;
+    }
 
-    public Task<bool> DesactivarTicketAsync(Guid guid, CancellationToken ct = default) => _data.DesactivarTicketAsync(guid, "admin", ct);
+    public async Task<bool> DesactivarTicketAsync(Guid guid, CancellationToken ct = default)
+    {
+        var result = await _data.DesactivarTicketAsync(guid, "admin", ct);
+        if (result)
+        {
+            await PublishAsync("ticket.v3.desactivado", "ticket.v3.desactivado", new AtraccionesEventPayloadV3
+            {
+                Entidad = "ticket",
+                Accion = "desactivado",
+                Guid = guid,
+                TicketGuid = guid,
+                Estado = "I"
+            }, ct);
+        }
+
+        return result;
+    }
 
     public async Task<object> ListarHorariosAsync(CancellationToken ct = default) => await _data.ListarHorariosAsync(ct);
     public async Task<object> GuardarHorarioAsync(Guid? guid, AdminHorarioRequest request, CancellationToken ct = default)
@@ -85,13 +173,79 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
             Usuario = "admin"
         };
 
-        return request.Fecha.HasValue
+        object result = request.Fecha.HasValue
             ? await _data.GuardarHorarioAsync(model, ct)
             : await _data.GuardarReglaYGenerarHorariosAsync(model, ct);
+
+        if (result is HorarioAdminDataModel horario)
+        {
+            var eventType = guid.HasValue ? "horario.v3.actualizado" : "horario.v3.creado";
+            await PublishAsync(eventType, eventType, new AtraccionesEventPayloadV3
+            {
+                Entidad = "horario",
+                Accion = guid.HasValue ? "actualizado" : "creado",
+                Guid = horario.Guid,
+                Id = horario.Id,
+                HorarioGuid = horario.Guid,
+                AtraccionId = horario.AtraccionId,
+                CuposRestantes = horario.CuposDisponibles,
+                Estado = horario.Estado,
+                Snapshot = horario
+            }, ct);
+        }
+        else if (result is HorarioGeneracionDataModel generacion)
+        {
+            await PublishAsync("horario.v3.generado", "horario.v3.generado", new AtraccionesEventPayloadV3
+            {
+                Entidad = "horario",
+                Accion = "generado",
+                Guid = generacion.Regla.Guid,
+                Id = generacion.Regla.Id,
+                AtraccionId = generacion.Regla.AtraccionId,
+                CuposRestantes = generacion.Regla.Cupos,
+                Cantidad = generacion.Generados,
+                Estado = generacion.Regla.Estado,
+                Snapshot = generacion
+            }, ct);
+        }
+
+        return result;
     }
 
-    public Task<bool> DesactivarHorarioAsync(Guid guid, CancellationToken ct = default) => _data.DesactivarHorarioAsync(guid, "admin", ct);
-    public Task<int> DesactivarHorariosVencidosAsync(CancellationToken ct = default) => _data.DesactivarHorariosVencidosAsync("admin", ct);
+    public async Task<bool> DesactivarHorarioAsync(Guid guid, CancellationToken ct = default)
+    {
+        var result = await _data.DesactivarHorarioAsync(guid, "admin", ct);
+        if (result)
+        {
+            await PublishAsync("horario.v3.desactivado", "horario.v3.desactivado", new AtraccionesEventPayloadV3
+            {
+                Entidad = "horario",
+                Accion = "desactivado",
+                Guid = guid,
+                HorarioGuid = guid,
+                Estado = "I"
+            }, ct);
+        }
+
+        return result;
+    }
+
+    public async Task<int> DesactivarHorariosVencidosAsync(CancellationToken ct = default)
+    {
+        var total = await _data.DesactivarHorariosVencidosAsync("admin", ct);
+        if (total > 0)
+        {
+            await PublishAsync("horario.v3.vencidos_desactivados", "horario.v3.vencidos_desactivados", new AtraccionesEventPayloadV3
+            {
+                Entidad = "horario",
+                Accion = "vencidos_desactivados",
+                Cantidad = total,
+                Estado = "I"
+            }, ct);
+        }
+
+        return total;
+    }
 
     public async Task<object> ListarReseniasAsync(CancellationToken ct = default) => await _data.ListarReseniasAsync(ct);
     public async Task<object> ListarReseniasPorAtraccionAsync(Guid atraccionGuid, CancellationToken ct = default) =>
@@ -113,7 +267,7 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
             ? $"booking:{request.ClienteId.Value}"
             : "cliente";
 
-        return await _data.CrearReseniaAsync(new CrearReseniaDataModel
+        var result = await _data.CrearReseniaAsync(new CrearReseniaDataModel
         {
             ClienteId = request.ClienteId,
             AtraccionGuid = request.AtraccionGuid,
@@ -122,12 +276,57 @@ public sealed class AdminAtraccionesService : IAdminAtraccionesService
             Rating = rating,
             Usuario = usuario
         }, ct);
+        await PublishAsync("resenia.v3.creada", "resenia.v3.creada", new AtraccionesEventPayloadV3
+        {
+            Entidad = "resenia",
+            Accion = "creada",
+            Guid = result.Guid,
+            Id = result.AtraccionId,
+            AtraccionGuid = result.AtraccionGuid,
+            AtraccionId = result.AtraccionId,
+            Estado = result.Estado,
+            Snapshot = result
+        }, ct);
+        return result;
     }
 
-    public Task<bool> CambiarEstadoReseniaAsync(Guid guid, string estado, CancellationToken ct = default) =>
-        _data.CambiarEstadoReseniaAsync(guid, estado, "admin", ct);
+    public async Task<bool> CambiarEstadoReseniaAsync(Guid guid, string estado, CancellationToken ct = default)
+    {
+        var result = await _data.CambiarEstadoReseniaAsync(guid, estado, "admin", ct);
+        if (result)
+        {
+            await PublishAsync("resenia.v3.estado_actualizado", "resenia.v3.estado_actualizado", new AtraccionesEventPayloadV3
+            {
+                Entidad = "resenia",
+                Accion = "estado_actualizado",
+                Guid = guid,
+                Estado = estado
+            }, ct);
+        }
+
+        return result;
+    }
 
     private static async Task<object> Wrap<T>(Task<T> task) where T : notnull => await task;
+
+    private Task PublishCatalogoEventAsync(object data, string tipo, string accion, CancellationToken ct)
+    {
+        var item = data as CatalogoItemDataModel;
+        return PublishAsync($"catalogo.v3.{accion}", $"catalogo.v3.{accion}", new AtraccionesEventPayloadV3
+        {
+            Entidad = "catalogo",
+            Accion = accion,
+            CatalogoTipo = tipo,
+            Guid = item?.Guid,
+            Id = item?.Id,
+            Nombre = item?.Nombre,
+            Estado = item?.Estado,
+            Snapshot = data
+        }, ct);
+    }
+
+    private Task PublishAsync(string eventType, string routingKey, AtraccionesEventPayloadV3 payload, CancellationToken ct) =>
+        _events.PublishAsync(new AtraccionesV3Event { EventType = eventType, Payload = payload }, routingKey, ct);
 
     private static string? FirstNotBlank(params string?[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();

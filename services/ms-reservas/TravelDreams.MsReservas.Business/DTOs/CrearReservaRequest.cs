@@ -4,6 +4,9 @@ namespace TravelDreams.MsReservas.Business.DTOs;
 
 public sealed class CrearReservaRequest
 {
+    [JsonIgnore]
+    public Guid? CorrelationId { get; set; }
+
     [JsonPropertyName("cliente_guid")]
     public Guid? ClienteGuid { get; set; }
 

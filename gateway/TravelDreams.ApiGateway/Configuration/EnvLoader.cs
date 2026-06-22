@@ -4,10 +4,10 @@ public static class EnvLoader
 {
     public static void Load()
     {
-        var envPath = Path.Combine(AppContext.BaseDirectory, ".env");
+        var envPath = System.IO.Path.Combine(AppContext.BaseDirectory, ".env");
         if (!File.Exists(envPath))
         {
-            envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+            envPath = System.IO.Path.Combine(Directory.GetCurrentDirectory(), ".env");
         }
 
         if (!File.Exists(envPath)) return;
