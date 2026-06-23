@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Travel of Your Dreams",
+    "slug": "travel-of-your-dreams-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "traveldreams",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.traveldreams.marketplace",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "95f08ac8-6978-40a9-b891-805709a65359"
+      }
+    }
+  }
+}
