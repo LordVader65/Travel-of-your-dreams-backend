@@ -4,6 +4,7 @@ import {
   Invoice,
   PaymentProcess,
   ProcessResponse,
+  RegisterCustomerInput,
   Reservation,
   ReservationProcess,
   Session,
@@ -31,6 +32,13 @@ export class ApiClient {
     };
   }
 
+  async register(login: string, password: string) {
+    await this.request('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ login: login.trim(), password }),
+    });
+  }
+
   async attractions() {
     const response = await this.request('/api/v2/atracciones?page=1&limit=50', { method: 'GET' }, false);
     return items(response).map(attraction);
@@ -44,6 +52,23 @@ export class ApiClient {
   async profile(login = ''): Promise<CustomerProfile> {
     const response = await this.request('/api/v1/me', { method: 'GET' }, true);
     return customerProfile(unwrap(response), login);
+  }
+
+  async updateProfile(input: RegisterCustomerInput): Promise<CustomerProfile> {
+    const response = await this.request('/api/v1/me', {
+      method: 'PUT',
+      body: JSON.stringify({
+        tipo_identificacion: input.identificationType,
+        numero_identificacion: input.identificationNumber.trim(),
+        nombres: input.names.trim(),
+        apellidos: input.lastNames.trim(),
+        razon_social: null,
+        correo: input.login.trim().toLowerCase(),
+        telefono: input.phone?.trim() || null,
+        direccion: input.address?.trim() || null,
+      }),
+    }, true);
+    return customerProfile(unwrap(response), input.login);
   }
 
   async schedules(attractionGuid: string) {
@@ -120,6 +145,13 @@ export class ApiClient {
       { guid },
     );
     return reservation(unwrap(value.reserva));
+  }
+
+  async cancelReservation(guid: string, reason = 'Cancelada desde marketplace movil') {
+    await this.request(`/api/v1/reservas/${guid}/cancelar`, {
+      method: 'PUT',
+      body: JSON.stringify({ motivo: reason }),
+    }, true);
   }
 
   async requestPayment(input: {
@@ -201,7 +233,7 @@ export class ApiClient {
       authenticated,
     );
     if (response?.errors?.length) {
-      throw new Error(response.errors.map((x: any) => x.message).join('\n'));
+      throw new Error(response.errors.map((x: any) => readableError(x.message)).join('\n'));
     }
     return response.data as T;
   }
@@ -227,7 +259,7 @@ export class ApiClient {
       body = raw;
     }
     if (!response.ok) {
-      throw new Error(errorMessage(body) || `La solicitud falló (${response.status}).`);
+      throw new Error(readableError(errorMessage(body) || `La solicitud falló (${response.status}).`));
     }
     return body;
   }
@@ -243,7 +275,7 @@ export class ApiClient {
       }
       await delay(1500);
     }
-    if (lastError instanceof Error) throw lastError;
+    if (lastError instanceof Error) throw new Error(readableError(lastError.message));
     throw new Error('El procesamiento está tardando más de lo esperado. Revisa tu actividad en unos segundos.');
   }
 }
@@ -260,6 +292,48 @@ function errorMessage(body: any): string {
   if (typeof body === 'string') return body;
   if (Array.isArray(body?.details) && body.details.length) return body.details.join('\n');
   return body?.error ?? body?.message ?? body?.title ?? '';
+}
+
+function readableError(message: string) {
+  const detail = /Detail="([^"]+)"/i.exec(message)?.[1];
+  const cleaned = (detail ?? message)
+    .replace(/^Status\(StatusCode="[^"]+",\s*/i, '')
+    .replace(/^Detail="/i, '')
+    .replace(/"\)?$/i, '')
+    .trim();
+
+  if (/maximo permitido.*horario.*0 ticket/i.test(cleaned)) {
+    return 'Este horario ya no tiene cupos disponibles. Elige otro horario para continuar.';
+  }
+  if (/cantidad supera|capacidad maxima/i.test(cleaned)) {
+    return 'La cantidad seleccionada supera los cupos disponibles para esta entrada.';
+  }
+  if (/ticket no encontrado/i.test(cleaned)) {
+    return 'La entrada seleccionada ya no está disponible para esta atracción.';
+  }
+  if (/horario.*no encontrado|atraccion.*horario/i.test(cleaned)) {
+    return 'El horario seleccionado ya no está disponible. Actualiza la pantalla e intenta nuevamente.';
+  }
+  if (/cliente activo no encontrado|perfil no encontrado/i.test(cleaned)) {
+    return 'No encontramos tu perfil de cliente. Vuelve a iniciar sesión o revisa tu cuenta.';
+  }
+  if (/solo se puede cancelar una reserva pendiente/i.test(cleaned)) {
+    return 'Solo se pueden cancelar reservas pendientes.';
+  }
+  if (/login ya esta registrado|login ya está registrado/i.test(cleaned)) {
+    return 'Ese correo ya está registrado. Inicia sesión o usa otro correo.';
+  }
+  if (/login debe ser un correo valido|login debe ser un correo válido/i.test(cleaned)) {
+    return 'Ingresa un correo válido.';
+  }
+  if (/password debe tener al menos 8 caracteres/i.test(cleaned)) {
+    return 'La contraseña debe tener al menos 8 caracteres.';
+  }
+  if (/failedprecondition|statuscode|exception|stack/i.test(cleaned)) {
+    return 'No se pudo completar la operación. Revisa los datos e intenta nuevamente.';
+  }
+
+  return cleaned || 'No se pudo completar la operación. Intenta nuevamente.';
 }
 
 function delay(milliseconds: number) {

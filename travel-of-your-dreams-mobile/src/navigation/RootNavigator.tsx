@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../auth/AuthContext';
@@ -12,6 +13,7 @@ import { InvoiceDetailScreen } from '../screens/InvoiceDetailScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { PaymentScreen } from '../screens/PaymentScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { RegisterScreen } from '../screens/RegisterScreen';
 import { colors } from '../theme/colors';
 import { MainTabParamList, RootStackParamList } from './types';
 
@@ -55,8 +57,13 @@ function MainTabs() {
 
 export function RootNavigator() {
   const { session } = useAuth();
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
-  if (!session) return <LoginScreen />;
+  if (!session) {
+    return authMode === 'login'
+      ? <LoginScreen onRegister={() => setAuthMode('register')} />
+      : <RegisterScreen onLogin={() => setAuthMode('login')} />;
+  }
 
   return (
     <Root.Navigator

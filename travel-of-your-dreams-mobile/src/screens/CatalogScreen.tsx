@@ -36,9 +36,17 @@ export function CatalogScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = normalizeSearch(search);
     if (!term) return data;
-    return data.filter((x) => `${x.name} ${x.country} ${x.description}`.toLowerCase().includes(term));
+    return data.filter((x) => normalizeSearch([
+      x.name,
+      x.country,
+      x.address,
+      x.description,
+      ...x.categories,
+      ...x.languages,
+      ...x.includes,
+    ].join(' ')).includes(term));
   }, [data, search]);
 
   return (
@@ -79,6 +87,14 @@ export function CatalogScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function normalizeSearch(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 const styles = StyleSheet.create({

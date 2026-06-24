@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -29,6 +29,7 @@ export function ActivityScreen() {
   const [expandedGuid, setExpandedGuid] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cancellingGuid, setCancellingGuid] = useState<string>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,6 +55,35 @@ export function ActivityScreen() {
       void load();
     }, [load]),
   );
+
+  function confirmCancel(reservation: Reservation) {
+    Alert.alert(
+      'Cancelar reserva',
+      `Se cancelara la reserva ${reservation.code || ''}. Esta accion liberara los cupos seleccionados.`,
+      [
+        { text: 'Volver', style: 'cancel' },
+        {
+          text: 'Cancelar reserva',
+          style: 'destructive',
+          onPress: () => void cancelReservation(reservation),
+        },
+      ],
+    );
+  }
+
+  async function cancelReservation(reservation: Reservation) {
+    setCancellingGuid(reservation.guid);
+    try {
+      await api.cancelReservation(reservation.guid);
+      Alert.alert('Reserva cancelada', 'La reserva se cancelo correctamente.');
+      setExpandedGuid(undefined);
+      await load();
+    } catch (reason) {
+      Alert.alert('No se pudo cancelar', reason instanceof Error ? reason.message : 'Intenta nuevamente.');
+    } finally {
+      setCancellingGuid(undefined);
+    }
+  }
 
   return (
     <Screen>
@@ -105,6 +135,14 @@ export function ActivityScreen() {
                       <Button
                         label="Continuar al pago"
                         onPress={() => navigation.navigate('Payment', { reservation })}
+                      />
+                    ) : null}
+                    {canCancelReservation(reservation) ? (
+                      <Button
+                        label="Cancelar reserva"
+                        loading={cancellingGuid === reservation.guid}
+                        onPress={() => confirmCancel(reservation)}
+                        variant="danger"
                       />
                     ) : null}
                   </View>
@@ -234,6 +272,10 @@ function reservationDetailsText(reservation: Reservation) {
       return `${quantity} x ${title}`;
     })
     .join(', ');
+}
+
+function canCancelReservation(reservation: Reservation) {
+  return reservation.status.toUpperCase() === 'PENDIENTE';
 }
 
 function invoiceReservationText(invoice: Invoice) {

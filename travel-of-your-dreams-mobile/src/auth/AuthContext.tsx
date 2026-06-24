@@ -2,13 +2,14 @@ import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useSt
 
 import { ApiClient } from '../services/ApiClient';
 import { clearSessionValue, readSessionValue, writeSessionValue } from '../services/storage';
-import { Session } from '../types/models';
+import { RegisterCustomerInput, Session } from '../types/models';
 
 interface AuthValue {
   session: Session | null;
   restoring: boolean;
   api: ApiClient;
   signIn(login: string, password: string): Promise<void>;
+  signUp(input: RegisterCustomerInput): Promise<void>;
   signOut(): Promise<void>;
 }
 
@@ -41,13 +42,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSession(next);
   }
 
+  async function signUp(input: RegisterCustomerInput) {
+    const normalizedLogin = input.login.trim().toLowerCase();
+    await api.register(normalizedLogin, input.password);
+
+    const next = await api.login(normalizedLogin, input.password);
+    if (!next.token) throw new Error('El servidor no devolvio un token valido.');
+    if (!next.roles.some((role) => role.toUpperCase() === 'CLIENTE')) {
+      throw new Error('Esta aplicacion esta disponible para clientes registrados.');
+    }
+
+    const profileApi = new ApiClient(() => next.token);
+    await profileApi.updateProfile({ ...input, login: normalizedLogin });
+
+    await writeSessionValue(JSON.stringify(next));
+    setSession(next);
+  }
+
   async function signOut() {
     await clearSessionValue();
     setSession(null);
   }
 
   return (
-    <AuthContext.Provider value={{ session, restoring, api, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, restoring, api, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
