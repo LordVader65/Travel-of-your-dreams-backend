@@ -1,5 +1,7 @@
 import { environment } from '../config/environment';
 import {
+  BillingData,
+  BillingDataInput,
   CustomerProfile,
   Invoice,
   PaymentProcess,
@@ -9,7 +11,7 @@ import {
   ReservationProcess,
   Session,
 } from '../types/models';
-import { attraction, customerProfile, invoice, items, reservation, schedule, ticket, unwrap } from './normalizers';
+import { attraction, billingData, customerProfile, invoice, items, reservation, schedule, ticket, unwrap } from './normalizers';
 
 type TokenProvider = () => string | null;
 
@@ -69,6 +71,29 @@ export class ApiClient {
       }),
     }, true);
     return customerProfile(unwrap(response), input.login);
+  }
+
+  async billingData(): Promise<BillingData[]> {
+    const response = await this.request('/api/v1/me/datos-facturacion', { method: 'GET' }, true);
+    return items(response).map(billingData);
+  }
+
+  async createBillingData(input: BillingDataInput): Promise<BillingData> {
+    const response = await this.request('/api/v1/me/datos-facturacion', {
+      method: 'POST',
+      body: JSON.stringify({
+        cliente_guid: '00000000-0000-0000-0000-000000000000',
+        tipo_identificacion: input.identificationType,
+        numero_identificacion: input.identificationNumber.trim(),
+        razon_social: input.businessName?.trim() || null,
+        nombre: input.name.trim(),
+        apellido: input.lastName?.trim() || null,
+        correo: input.email.trim().toLowerCase(),
+        telefono: input.phone?.trim() || null,
+        direccion: input.address?.trim() || null,
+      }),
+    }, true);
+    return billingData(unwrap(response));
   }
 
   async schedules(attractionGuid: string) {
@@ -157,6 +182,7 @@ export class ApiClient {
   async requestPayment(input: {
     reservationGuid: string;
     amount: number;
+    billingDataGuid?: string | null;
     method?: string;
     reference?: string;
   }): Promise<ProcessResponse> {
@@ -167,6 +193,7 @@ export class ApiClient {
       {
         input: {
           reservaGuid: input.reservationGuid,
+          datosFacturacionGuid: input.billingDataGuid ?? null,
           monto: input.amount,
           metodo: input.method ?? 'TARJETA',
           moneda: 'USD',

@@ -32,6 +32,31 @@ export interface RegisterCustomerInput {
   address?: string;
 }
 
+export type IdentificationType = 'CEDULA' | 'RUC' | 'PASAPORTE';
+
+export interface BillingData {
+  guid: string;
+  identificationType: IdentificationType;
+  identificationNumber: string;
+  businessName?: string;
+  name: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface BillingDataInput {
+  identificationType: IdentificationType;
+  identificationNumber: string;
+  businessName?: string;
+  name: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  address?: string;
+}
+
 export interface Attraction {
   guid: string;
   name: string;
