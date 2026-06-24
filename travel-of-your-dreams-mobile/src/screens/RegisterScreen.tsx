@@ -4,8 +4,15 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vi
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../auth/AuthContext';
-import { BrandHeader, Button, Card, Field } from '../components/ui';
+import { BrandHeader, Button, Card, Chip, Field } from '../components/ui';
 import { colors } from '../theme/colors';
+import type { IdentificationType } from '../types/models';
+
+const identificationTypes: Array<{ value: IdentificationType; label: string }> = [
+  { value: 'CEDULA', label: 'Cedula' },
+  { value: 'RUC', label: 'RUC' },
+  { value: 'PASAPORTE', label: 'Pasaporte' },
+];
 
 export function RegisterScreen({ onLogin }: { onLogin(): void }) {
   const { signUp } = useAuth();
@@ -14,7 +21,7 @@ export function RegisterScreen({ onLogin }: { onLogin(): void }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [names, setNames] = useState('');
   const [lastNames, setLastNames] = useState('');
-  const [identificationType, setIdentificationType] = useState('CEDULA');
+  const [identificationType, setIdentificationType] = useState<IdentificationType>('CEDULA');
   const [identificationNumber, setIdentificationNumber] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -52,7 +59,6 @@ export function RegisterScreen({ onLogin }: { onLogin(): void }) {
     if (password !== confirmPassword) return 'Las contrasenas no coinciden.';
     if (!names.trim()) return 'Ingresa tus nombres.';
     if (!lastNames.trim()) return 'Ingresa tus apellidos.';
-    if (!identificationType.trim()) return 'Ingresa el tipo de identificacion.';
     if (!identificationNumber.trim()) return 'Ingresa tu numero de identificacion.';
     return '';
   }
@@ -100,16 +106,22 @@ export function RegisterScreen({ onLogin }: { onLogin(): void }) {
               <Field label="Apellidos" onChangeText={setLastNames} value={lastNames} />
             </View>
             <View style={styles.columns}>
-              <Field
-                autoCapitalize="characters"
-                label="Tipo identificacion"
-                onChangeText={setIdentificationType}
-                value={identificationType}
-              />
+              <Text style={styles.label}>Tipo identificacion</Text>
+              <View style={styles.chipRow}>
+                {identificationTypes.map((item) => (
+                  <Chip
+                    active={identificationType === item.value}
+                    key={item.value}
+                    label={item.label}
+                    onPress={() => setIdentificationType(item.value)}
+                  />
+                ))}
+              </View>
               <Field
                 keyboardType="number-pad"
                 label="Numero identificacion"
-                onChangeText={setIdentificationNumber}
+                maxLength={20}
+                onChangeText={(value) => setIdentificationNumber(value.replace(/\D/g, '').slice(0, 20))}
                 value={identificationNumber}
               />
             </View>
@@ -135,4 +147,6 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 23, fontWeight: '900' },
   copy: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   columns: { gap: 12 },
+  label: { color: colors.muted, fontSize: 13, fontWeight: '800' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

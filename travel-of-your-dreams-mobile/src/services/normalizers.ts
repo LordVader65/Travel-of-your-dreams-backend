@@ -1,4 +1,4 @@
-import { Attraction, CustomerProfile, Invoice, Reservation, Schedule, Ticket } from '../types/models';
+import { Attraction, BillingData, CustomerProfile, Invoice, Reservation, Schedule, Ticket } from '../types/models';
 
 const fallbackImage =
   'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80';
@@ -78,6 +78,20 @@ export function customerProfile(value: any, login = ''): CustomerProfile {
     address: value?.direccion ?? value?.address,
     identificationType: value?.tipoIdentificacion ?? value?.tipo_identificacion,
     identificationNumber: value?.numeroIdentificacion ?? value?.numero_identificacion,
+  };
+}
+
+export function billingData(value: any): BillingData {
+  return {
+    guid: String(value?.guid ?? value?.dfac_guid ?? ''),
+    identificationType: value?.tipoIdentificacion ?? value?.tipo_identificacion ?? 'CEDULA',
+    identificationNumber: value?.numeroIdentificacion ?? value?.numero_identificacion ?? '',
+    businessName: value?.razonSocial ?? value?.razon_social,
+    name: value?.nombre ?? '',
+    lastName: value?.apellido ?? '',
+    email: value?.correo ?? '',
+    phone: value?.telefono ?? '',
+    address: value?.direccion ?? '',
   };
 }
 
