@@ -21,6 +21,17 @@ export interface CustomerProfile {
   identificationNumber?: string;
 }
 
+export interface RegisterCustomerInput {
+  login: string;
+  password: string;
+  names: string;
+  lastNames: string;
+  identificationType: string;
+  identificationNumber: string;
+  phone?: string;
+  address?: string;
+}
+
 export interface Attraction {
   guid: string;
   name: string;

@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { BrandHeader, Button, Card, Field } from '../components/ui';
 import { colors } from '../theme/colors';
 
-export function LoginScreen() {
+export function LoginScreen({ onRegister }: { onRegister(): void }) {
   const { signIn } = useAuth();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
@@ -43,6 +43,7 @@ export function LoginScreen() {
           <Field autoCapitalize="none" autoComplete="username" label="Usuario o correo" onChangeText={setLogin} value={login} />
           <Field autoCapitalize="none" autoComplete="password" label="Contraseña" onChangeText={setPassword} onSubmitEditing={submit} secureTextEntry value={password} />
           <Button icon="log-in-outline" label="Ingresar" loading={loading} onPress={submit} />
+          <Button label="Crear cuenta" onPress={onRegister} variant="secondary" />
         </Card>
       </ScrollView>
       </KeyboardAvoidingView>
